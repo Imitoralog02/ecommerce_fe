@@ -40,3 +40,28 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Flutter / Dart ###
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+coverage/
+
+### Local configuration and credentials ###
+/.idea/
+/local.properties
+.env
+.env.*
+!.env.example
+**/key.properties
+**/*.jks
+**/*.keystore
+
+### Generated logs and packages ###
+*.log
+*.apk
+*.aab
+*.ipa
