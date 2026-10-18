@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/payment_method_entities.dart';
@@ -89,7 +90,6 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     final numberCtrl = TextEditingController();
     final holderCtrl = TextEditingController();
     final expiryCtrl = TextEditingController();
-    final cvvCtrl = TextEditingController();
     bool makeDefault = true;
 
     showModalBottomSheet(
@@ -98,9 +98,8 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSheetState) {
-          final cardNumber = numberCtrl.text.isEmpty
-              ? '•••• •••• •••• ••••'
-              : numberCtrl.text;
+          final cardNumber =
+              '•••• •••• •••• ${numberCtrl.text.isEmpty ? '••••' : numberCtrl.text}';
           final cardHolder = holderCtrl.text.isEmpty
               ? 'NGUYEN LINH'
               : holderCtrl.text.toUpperCase();
@@ -108,10 +107,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
               ? 'MM/YY'
               : expiryCtrl.text;
 
-          String detectedType = 'Visa';
-          if (numberCtrl.text.startsWith('5')) detectedType = 'Mastercard';
-          if (numberCtrl.text.startsWith('9')) detectedType = 'Napas';
-          if (numberCtrl.text.startsWith('3')) detectedType = 'JCB';
+          const detectedType = 'DEMO';
 
           return Container(
             height: MediaQuery.of(context).size.height * 0.88,
@@ -148,7 +144,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Thêm Thẻ Thanh Toán Mới',
+                        'Thêm thẻ thanh toán',
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
@@ -294,12 +290,25 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                   const SizedBox(height: 20),
 
                   // Fields
-                  _buildSheetLabel('Số thẻ ngân hàng'),
+                  _buildSheetLabel('4 số cuối của thẻ'),
                   _buildSheetTextField(
                     numberCtrl,
-                    '4123 4567 8901 2345',
+                    '4242',
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(4),
+                    ],
                     onChanged: (_) => setSheetState(() {}),
+                  ),
+
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Liên kết mô phỏng trong ứng dụng. Không nhập số thẻ đầy đủ hoặc CVV.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textMuted,
+                    ),
                   ),
 
                   const SizedBox(height: 14),
@@ -314,39 +323,12 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
 
                   const SizedBox(height: 14),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildSheetLabel('Ngày hết hạn'),
-                            _buildSheetTextField(
-                              expiryCtrl,
-                              'MM/YY',
-                              keyboardType: TextInputType.datetime,
-                              onChanged: (_) => setSheetState(() {}),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildSheetLabel('Mã bảo mật CVV'),
-                            _buildSheetTextField(
-                              cvvCtrl,
-                              '3 chữ số',
-                              obscure: true,
-                              keyboardType: TextInputType.number,
-                              onChanged: (_) => setSheetState(() {}),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  _buildSheetLabel('Ngày hết hạn'),
+                  _buildSheetTextField(
+                    expiryCtrl,
+                    'MM/YY',
+                    keyboardType: TextInputType.datetime,
+                    onChanged: (_) => setSheetState(() {}),
                   ),
 
                   const SizedBox(height: 12),
@@ -380,17 +362,21 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: () {
-                        if (numberCtrl.text.trim().isEmpty) return;
-                        final cleanNumber = numberCtrl.text.replaceAll(' ', '');
-                        final last4 = cleanNumber.length >= 4
-                            ? cleanNumber.substring(cleanNumber.length - 4)
-                            : cleanNumber;
+                        final last4 = numberCtrl.text.trim();
+                        if (!RegExp(r'^\d{4}$').hasMatch(last4)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Vui lòng nhập đúng 4 chữ số.'),
+                            ),
+                          );
+                          return;
+                        }
 
                         final newCard = PaymentCardEntity(
                           id: 'card-${DateTime.now().millisecondsSinceEpoch}',
-                          bankName: 'Ngân hàng Quốc tế',
+                          bankName: 'Thẻ mô phỏng',
                           cardType: detectedType,
-                          lastFour: last4.isEmpty ? '8888' : last4,
+                          lastFour: last4,
                           holderName: holderCtrl.text.trim().isEmpty
                               ? 'NGUYEN LINH'
                               : holderCtrl.text.toUpperCase(),
@@ -409,7 +395,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: const Text(
-                              'Đã liên kết thẻ thành công theo chuẩn PCI-DSS 🛡️',
+                              'Đã thêm thẻ mô phỏng. Không có kết nối ngân hàng.',
                             ),
                             backgroundColor: AppColors.brandBlack,
                             behavior: SnackBarBehavior.floating,
@@ -433,7 +419,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                           Icon(Icons.shield_outlined, size: 18),
                           SizedBox(width: 8),
                           Text(
-                            'LƯU THẺ BẢO MẬT (PCI-DSS)',
+                            'LƯU THẺ',
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 13.5,
@@ -506,7 +492,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             onPressed: _showAddCardSheet,
             icon: const Icon(Icons.add_rounded, size: 20),
             label: const Text(
-              'THÊM THẺ THANH TOÁN MỚI',
+              'THÊM THẺ THANH TOÁN',
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w800,
@@ -530,40 +516,13 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // PCI DSS Security Banner
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF7F4EF),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.lock_outline_rounded,
-                    size: 18,
-                    color: AppColors.coralOrange,
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Thông tin thanh toán được mã hoá đầu cuối 256-bit chuẩn quốc tế PCI-DSS.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.textSecondary,
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
             // 1. Saved Bank Cards
-            _buildSectionHeader('THẺ NGÂN HÀNG & QUỐC TẾ'),
+            _buildSectionHeader('THẺ THANH TOÁN'),
+            if (paymentState.cards.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('Chưa có thẻ nào.'),
+              ),
             ...paymentState.cards.map((card) => _buildCardTile(card)),
 
             const SizedBox(height: 20),
@@ -579,9 +538,11 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
               child: Column(
                 children: [
                   _buildWalletTile(
-                    logoAsset: 'assets/images/real/onb_welcome.jpg',
+                    logoAsset: 'assets/images/real/onb_browsing.jpg',
                     name: 'Ví MoMo',
-                    subtitle: 'Đã liên kết (0908 123 456)',
+                    subtitle: paymentState.momoLinked
+                        ? 'Đã bật liên kết mô phỏng'
+                        : 'Bật để dùng trong đơn hàng mẫu',
                     isLinked: paymentState.momoLinked,
                     badgeColor: const Color(0xFFA50064),
                     onToggle: ref
@@ -592,7 +553,9 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                   _buildWalletTile(
                     logoAsset: 'assets/images/real/onb_delivery.jpg',
                     name: 'Ví ZaloPay',
-                    subtitle: 'Đã liên kết tài khoản Zalo',
+                    subtitle: paymentState.zalopayLinked
+                        ? 'Đã bật liên kết mô phỏng'
+                        : 'Bật để dùng trong đơn hàng mẫu',
                     isLinked: paymentState.zalopayLinked,
                     badgeColor: const Color(0xFF0068FF),
                     onToggle: ref
@@ -603,7 +566,9 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                   _buildWalletTile(
                     logoAsset: 'assets/images/real/onb_shopping.jpg',
                     name: 'Apple Pay / Google Pay',
-                    subtitle: 'Thanh toán chạm một chạm',
+                    subtitle: paymentState.deviceWalletEnabled
+                        ? 'Đã bật liên kết mô phỏng'
+                        : 'Bật để dùng trong đơn hàng mẫu',
                     isLinked: paymentState.deviceWalletEnabled,
                     badgeColor: AppColors.brandBlack,
                     onToggle: ref
@@ -902,15 +867,15 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
   static Widget _buildSheetTextField(
     TextEditingController controller,
     String hint, {
-    bool obscure = false,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
     TextCapitalization textCapitalization = TextCapitalization.none,
     ValueChanged<String>? onChanged,
   }) {
     return TextField(
       controller: controller,
-      obscureText: obscure,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       textCapitalization: textCapitalization,
       onChanged: onChanged,
       style: const TextStyle(

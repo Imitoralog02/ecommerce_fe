@@ -6,12 +6,12 @@ class MockMediaPickerRepository implements MediaPickerRepository {
   static const _assets = {
     MediaPickerPurpose.visualSearch: ['assets/images/real/onb_shopping.jpg'],
     MediaPickerPurpose.review: [
-      'assets/images/real/lookbook_summer_3.jpg',
-      'assets/images/real/lookbook_summer_4.jpg',
+      'assets/images/real/p_dress.jpg',
+      'assets/images/real/p_dress_side.jpg',
     ],
     MediaPickerPurpose.returnEvidence: [
-      'assets/images/real/lookbook_summer_2.jpg',
-      'assets/images/real/lookbook_summer_3.jpg',
+      'assets/images/real/p_shirt.jpg',
+      'assets/images/real/p_dress.jpg',
     ],
   };
 

@@ -8,6 +8,7 @@ class WalletSnapshot {
     required this.coinsToNextTier,
     required this.tierProgress,
     required this.checkedInToday,
+    this.lastCheckInDay,
     required this.vouchers,
     required this.transactions,
   });
@@ -18,6 +19,7 @@ class WalletSnapshot {
   final int coinsToNextTier;
   final double tierProgress;
   final bool checkedInToday;
+  final String? lastCheckInDay;
   final List<VoucherEntity> vouchers;
   final List<WalletTransactionEntity> transactions;
 }

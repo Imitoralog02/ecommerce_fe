@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
 import '../../domain/entities/voucher_entity.dart';
 import '../viewmodels/wallet_viewmodel.dart';
 
@@ -16,7 +17,7 @@ class VoucherWalletScreen extends ConsumerStatefulWidget {
 }
 
 class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
 
   final List<VoucherType> _tabTypes = [
@@ -24,11 +25,13 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
     VoucherType.shipping,
     VoucherType.discount,
     VoucherType.vipOnly,
+    VoucherType.coinReward,
   ];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(
       length: _tabTypes.length,
       vsync: this,
@@ -45,8 +48,16 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
+    if (lifecycleState == AppLifecycleState.resumed) {
+      ref.read(walletViewModelProvider.notifier).refreshDailyStatus();
+    }
   }
 
   void _handleCheckIn() {
@@ -108,17 +119,27 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
   }
 
   void _useVoucher(VoucherEntity voucher) {
+    final applied = ref
+        .read(cartViewModelProvider.notifier)
+        .applyCoupon(voucher.code);
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Đang áp dụng voucher ${voucher.code} cho đơn hàng!'),
+        content: Text(
+          applied
+              ? 'Đã áp dụng voucher ${voucher.code} cho giỏ hàng.'
+              : ref
+                        .read(cartViewModelProvider.notifier)
+                        .couponRejection(voucher.code) ??
+                    'Voucher này chưa áp dụng được cho giỏ hàng hiện tại.',
+        ),
         backgroundColor: AppColors.brandBlack,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         duration: const Duration(seconds: 2),
       ),
     );
-    Navigator.pop(context);
+    if (applied) Navigator.pop(context);
   }
 
   @override
@@ -211,8 +232,8 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
                   Expanded(
                     child: _buildStatBox(
                       '🎟️',
-                      '${walletState.vouchers.length}',
-                      'Voucher khả dụng',
+                      '${walletState.savedCount}',
+                      'Voucher đã lưu',
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -236,6 +257,8 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
                 ),
                 child: TabBar(
                   controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
                   indicator: BoxDecoration(
                     color: AppColors.brandBlack,
                     borderRadius: BorderRadius.circular(12),
@@ -257,6 +280,7 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
                     Tab(text: 'Freeship (${walletState.freeshipCount})'),
                     Tab(text: 'Giảm giá (${walletState.discountCount})'),
                     Tab(text: 'VIP (${walletState.vipCount})'),
+                    Tab(text: 'Hoàn xu (${walletState.coinRewardCount})'),
                   ],
                 ),
               ),
@@ -457,13 +481,13 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
                   color: const Color(0xFF1A1815),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Text('👑', style: TextStyle(fontSize: 13)),
-                    SizedBox(width: 4),
+                    const Text('👑', style: TextStyle(fontSize: 13)),
+                    const SizedBox(width: 4),
                     Text(
-                      'Hội viên Vàng',
-                      style: TextStyle(
+                      state.memberTier,
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFFDFC59E),
@@ -502,16 +526,18 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Vàng',
-                style: TextStyle(
+              Text(
+                state.memberTier.contains('Kim Cương') ? 'Kim Cương' : 'Vàng',
+                style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF1A1815),
                 ),
               ),
               Text(
-                'Còn ${state.coinsToNextTier} xu để lên Kim Cương 💎',
+                state.memberTier.contains('Kim Cương')
+                    ? 'Đã đạt hạng Kim Cương 💎'
+                    : 'Còn ${state.coinsToNextTier} xu để lên Kim Cương 💎',
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -834,33 +860,43 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
 
                               // Apply / Save Button
                               GestureDetector(
-                                onTap: () {
-                                  if (voucher.isSaved) {
-                                    _useVoucher(voucher);
-                                  } else {
-                                    ref
-                                        .read(walletViewModelProvider.notifier)
-                                        .toggleSaveVoucher(voucher.id);
-                                    ScaffoldMessenger.of(
-                                      context,
-                                    ).hideCurrentSnackBar();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Đã lưu mã "${voucher.code}" vào ví! 🎟️',
-                                        ),
-                                        backgroundColor: AppColors.brandBlack,
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        duration: const Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
+                                onTap: voucher.isUsed
+                                    ? null
+                                    : () {
+                                        if (voucher.isSaved) {
+                                          _useVoucher(voucher);
+                                        } else {
+                                          ref
+                                              .read(
+                                                walletViewModelProvider
+                                                    .notifier,
+                                              )
+                                              .toggleSaveVoucher(voucher.id);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).hideCurrentSnackBar();
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Đã lưu mã "${voucher.code}" vào ví! 🎟️',
+                                              ),
+                                              backgroundColor:
+                                                  AppColors.brandBlack,
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              duration: const Duration(
+                                                seconds: 2,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 11,
@@ -873,7 +909,11 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    voucher.isSaved ? 'Dùng ngay' : 'Lưu',
+                                    voucher.isUsed
+                                        ? 'Đã dùng'
+                                        : voucher.isSaved
+                                        ? 'Dùng ngay'
+                                        : 'Lưu',
                                     style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w900,

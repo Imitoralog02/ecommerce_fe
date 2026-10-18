@@ -2,23 +2,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../di/cart_providers.dart';
 import '../../domain/entities/cart_snapshot.dart';
+import '../../domain/services/cart_pricing.dart';
 import '../../../home/domain/entities/product_entity.dart';
+import '../../../orders/di/order_providers.dart';
+import '../../../wallet/di/wallet_providers.dart';
+import '../../../wallet/domain/entities/voucher_entity.dart';
 import '../../domain/entities/cart_item_entity.dart';
 
 class CartState {
   final List<CartItemEntity> items;
   final String? appliedCoupon;
-  final double discount;
   final double shippingFee;
+  final String memberTier;
+  final List<VoucherEntity> vouchers;
+  final bool firstOrder;
 
   const CartState({
     required this.items,
     this.appliedCoupon,
-    this.discount = 0.0,
     this.shippingFee = 0.0,
+    this.memberTier = '',
+    this.vouchers = const [],
+    this.firstOrder = false,
   });
 
   double get subtotal => items.fold(0.0, (acc, item) => acc + item.totalPrice);
+  PromotionResult get promotion => CartPricing.evaluate(
+    appliedCoupon,
+    subtotal: subtotal,
+    items: items,
+    voucher: vouchers.where((v) => v.code == appliedCoupon).firstOrNull,
+    memberTier: memberTier,
+    firstOrder: firstOrder,
+  );
+  double get discount => promotion.itemDiscount;
   double get total =>
       (subtotal - discount + shippingFee).clamp(0.0, double.infinity);
   int get totalItemCount =>
@@ -42,14 +59,19 @@ class CartState {
   CartState copyWith({
     List<CartItemEntity>? items,
     String? appliedCoupon,
-    double? discount,
     double? shippingFee,
+    String? memberTier,
+    List<VoucherEntity>? vouchers,
+    bool? firstOrder,
+    bool clearCoupon = false,
   }) {
     return CartState(
       items: items ?? this.items,
-      appliedCoupon: appliedCoupon ?? this.appliedCoupon,
-      discount: discount ?? this.discount,
+      appliedCoupon: clearCoupon ? null : (appliedCoupon ?? this.appliedCoupon),
       shippingFee: shippingFee ?? this.shippingFee,
+      memberTier: memberTier ?? this.memberTier,
+      vouchers: vouchers ?? this.vouchers,
+      firstOrder: firstOrder ?? this.firstOrder,
     );
   }
 }
@@ -59,15 +81,28 @@ class CartViewModel extends Notifier<CartState> {
   CartState build() {
     final repository = ref.read(cartRepositoryProvider);
     final snapshot = repository.load();
-    return CartState(
+    final wallet = ref.read(walletRepositoryProvider).load();
+    final firstOrder = !ref
+        .read(orderRepositoryProvider)
+        .getOrders()
+        .any((order) => order.isUserPlaced);
+    final loaded = CartState(
       items: snapshot.items,
       appliedCoupon: snapshot.appliedCoupon,
-      discount: snapshot.discount,
       shippingFee: snapshot.shippingFee,
+      memberTier: wallet.memberTier,
+      vouchers: wallet.vouchers,
+      firstOrder: firstOrder,
     );
+    return loaded.appliedCoupon != null && !loaded.promotion.isValid
+        ? loaded.copyWith(clearCoupon: true)
+        : loaded;
   }
 
   void _emit(CartState next) {
+    if (next.appliedCoupon != null && !next.promotion.isValid) {
+      next = next.copyWith(clearCoupon: true);
+    }
     ref
         .read(cartRepositoryProvider)
         .save(
@@ -87,7 +122,10 @@ class CartViewModel extends Notifier<CartState> {
     String color = 'Black',
   ]) {
     final existingIndex = state.items.indexWhere(
-      (item) => item.product.id == product.id && item.selectedSize == size,
+      (item) =>
+          item.product.id == product.id &&
+          item.selectedSize == size &&
+          item.selectedColor == color,
     );
 
     if (existingIndex >= 0) {
@@ -114,12 +152,22 @@ class CartViewModel extends Notifier<CartState> {
     }
   }
 
-  void updateQuantity(String productId, int quantity) {
+  void updateQuantity(
+    String productId,
+    int quantity, {
+    String? size,
+    String? color,
+  }) {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(productId, size: size, color: color);
       return;
     }
-    final index = state.items.indexWhere((i) => i.product.id == productId);
+    final index = state.items.indexWhere(
+      (i) =>
+          i.product.id == productId &&
+          (size == null || i.selectedSize == size) &&
+          (color == null || i.selectedColor == color),
+    );
     if (index >= 0) {
       final updatedList = List<CartItemEntity>.from(state.items);
       updatedList[index] = updatedList[index].copyWith(quantity: quantity);
@@ -127,9 +175,14 @@ class CartViewModel extends Notifier<CartState> {
     }
   }
 
-  void removeFromCart(String productId) {
+  void removeFromCart(String productId, {String? size, String? color}) {
     final updatedList = state.items
-        .where((i) => i.product.id != productId)
+        .where(
+          (i) =>
+              i.product.id != productId ||
+              (size != null && i.selectedSize != size) ||
+              (color != null && i.selectedColor != color),
+        )
         .toList();
     _emit(state.copyWith(items: updatedList));
   }
@@ -159,23 +212,42 @@ class CartViewModel extends Notifier<CartState> {
     }
   }
 
-  void applyCoupon(String code) {
-    final trimmed = code.trim().toUpperCase();
-    if (trimmed == 'NEO20' || trimmed == 'NEORA20') {
-      final disc = (state.subtotal * 0.20).roundToDouble();
-      _emit(state.copyWith(appliedCoupon: trimmed, discount: disc));
-    } else if (trimmed == 'NEO10' || trimmed == 'NEORA10') {
-      final disc = (state.subtotal * 0.10).roundToDouble();
-      _emit(state.copyWith(appliedCoupon: trimmed, discount: disc));
-    } else if (trimmed == 'FREESHIP') {
-      _emit(state.copyWith(appliedCoupon: trimmed, shippingFee: 0.0));
-    } else {
-      _emit(state.copyWith(appliedCoupon: trimmed, discount: 50000.0));
+  bool applyCoupon(String code) {
+    final normalized = CartPricing.normalizeCode(code);
+    final wallet = ref.read(walletRepositoryProvider).load();
+    final refreshed = state.copyWith(
+      memberTier: wallet.memberTier,
+      vouchers: wallet.vouchers,
+      firstOrder: !ref
+          .read(orderRepositoryProvider)
+          .getOrders()
+          .any((order) => order.isUserPlaced),
+    );
+    if (!refreshed.copyWith(appliedCoupon: normalized).promotion.isValid) {
+      return false;
     }
+    _emit(refreshed.copyWith(appliedCoupon: normalized));
+    return true;
+  }
+
+  String? couponRejection(String code) {
+    final wallet = ref.read(walletRepositoryProvider).load();
+    final normalized = CartPricing.normalizeCode(code);
+    return CartPricing.evaluate(
+      normalized,
+      subtotal: state.subtotal,
+      items: state.items,
+      voucher: wallet.vouchers.where((v) => v.code == normalized).firstOrNull,
+      memberTier: wallet.memberTier,
+      firstOrder: !ref
+          .read(orderRepositoryProvider)
+          .getOrders()
+          .any((order) => order.isUserPlaced),
+    ).reason;
   }
 
   void clearCart() {
-    _emit(const CartState(items: [], discount: 0.0));
+    _emit(state.copyWith(items: [], clearCoupon: true));
   }
 
   void addItems(List<CartItemEntity> newItems) {
@@ -184,7 +256,8 @@ class CartViewModel extends Notifier<CartState> {
       final idx = updated.indexWhere(
         (i) =>
             i.product.id == newItem.product.id &&
-            i.selectedSize == newItem.selectedSize,
+            i.selectedSize == newItem.selectedSize &&
+            i.selectedColor == newItem.selectedColor,
       );
       if (idx >= 0) {
         updated[idx] = updated[idx].copyWith(
@@ -203,8 +276,10 @@ class CartViewModel extends Notifier<CartState> {
       CartState(
         items: snapshot.items,
         appliedCoupon: snapshot.appliedCoupon,
-        discount: snapshot.discount,
         shippingFee: snapshot.shippingFee,
+        memberTier: state.memberTier,
+        vouchers: state.vouchers,
+        firstOrder: state.firstOrder,
       ),
     );
   }

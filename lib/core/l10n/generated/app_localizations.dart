@@ -341,7 +341,7 @@ abstract class AppLocalizations {
   /// No description provided for @paidWithLabel.
   ///
   /// In vi, this message translates to:
-  /// **'Thanh toán bằng'**
+  /// **'Phương thức thanh toán'**
   String get paidWithLabel;
 
   /// No description provided for @arrivingLabel.
@@ -383,7 +383,7 @@ abstract class AppLocalizations {
   /// No description provided for @authLoginSuccess.
   ///
   /// In vi, this message translates to:
-  /// **'Đăng nhập thành công! Chào mừng bạn đến với NÉORA.'**
+  /// **'Đã vào chế độ demo của NÉORA. Chưa có phiên đăng nhập thật.'**
   String get authLoginSuccess;
 
   /// No description provided for @forgotPasswordTitle.
@@ -602,12 +602,6 @@ abstract class AppLocalizations {
   /// **'BẮT ĐẦU MUA SẮM'**
   String get startShoppingAction;
 
-  /// No description provided for @loadSampleCartAction.
-  ///
-  /// In vi, this message translates to:
-  /// **'Tải giỏ hàng mẫu (2 sản phẩm)'**
-  String get loadSampleCartAction;
-
   /// No description provided for @freeShippingReached.
   ///
   /// In vi, this message translates to:
@@ -650,6 +644,12 @@ abstract class AppLocalizations {
   /// **'Đã áp dụng mã ưu đãi thành công! 🎉'**
   String get couponAppliedMessage;
 
+  /// No description provided for @couponRejectedMessage.
+  ///
+  /// In vi, this message translates to:
+  /// **'Mã ưu đãi không hợp lệ hoặc chưa đủ điều kiện.'**
+  String get couponRejectedMessage;
+
   /// No description provided for @applyAction.
   ///
   /// In vi, this message translates to:
@@ -667,6 +667,18 @@ abstract class AppLocalizations {
   /// In vi, this message translates to:
   /// **'Tổng thanh toán'**
   String get totalPaymentCartLabel;
+
+  /// No description provided for @shippingCalculatedAtCheckoutLabel.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tính khi đặt hàng'**
+  String get shippingCalculatedAtCheckoutLabel;
+
+  /// No description provided for @cartTotalBeforeShippingLabel.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tạm tính sau ưu đãi'**
+  String get cartTotalBeforeShippingLabel;
 
   /// No description provided for @proceedToOrderAction.
   ///
@@ -1103,14 +1115,50 @@ abstract class AppLocalizations {
   /// No description provided for @authResetLinkSent.
   ///
   /// In vi, this message translates to:
-  /// **'Liên kết đặt lại mật khẩu đã được gửi đến {email}'**
+  /// **'Bản demo không gửi email đặt lại mật khẩu đến {email}.'**
   String authResetLinkSent(String email);
 
   /// No description provided for @authRegistrationComplete.
   ///
   /// In vi, this message translates to:
-  /// **'Tạo tài khoản thành công! Bạn có thể đăng nhập ngay.'**
+  /// **'Đã mô phỏng đăng ký. Chưa có tài khoản nào được tạo.'**
   String get authRegistrationComplete;
+
+  /// No description provided for @demoOrderNotice.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã lưu trên thiết bị; chưa gửi đến cửa hàng.'**
+  String get demoOrderNotice;
+
+  /// No description provided for @paymentUnavailableLabel.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thiết lập để sử dụng'**
+  String get paymentUnavailableLabel;
+
+  /// No description provided for @mockPaymentLabel.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thanh toán mô phỏng'**
+  String get mockPaymentLabel;
+
+  /// No description provided for @mockCardEnding.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thẻ mô phỏng •••• {lastFour}'**
+  String mockCardEnding(String lastFour);
+
+  /// No description provided for @deviceWalletPaymentTitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Apple Pay / Google Pay'**
+  String get deviceWalletPaymentTitle;
+
+  /// No description provided for @managePaymentMethodsAction.
+  ///
+  /// In vi, this message translates to:
+  /// **'Quản lý phương thức thanh toán'**
+  String get managePaymentMethodsAction;
 }
 
 class _AppLocalizationsDelegate

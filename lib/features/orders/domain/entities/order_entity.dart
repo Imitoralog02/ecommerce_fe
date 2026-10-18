@@ -70,6 +70,10 @@ class OrderEntity {
   final String? trackingNumber;
   final String? estimatedDelivery;
   final String paymentMethod;
+  final String? couponCode;
+  final int coinReward;
+  final String? giftDescription;
+  final bool isUserPlaced;
 
   const OrderEntity({
     required this.id,
@@ -84,6 +88,10 @@ class OrderEntity {
     this.trackingNumber,
     this.estimatedDelivery,
     this.paymentMethod = 'Thanh toán khi nhận hàng (COD)',
+    this.couponCode,
+    this.coinReward = 0,
+    this.giftDescription,
+    this.isUserPlaced = false,
   });
 
   int get totalItemCount =>
@@ -122,6 +130,10 @@ class OrderEntity {
     String? trackingNumber,
     String? estimatedDelivery,
     String? paymentMethod,
+    String? couponCode,
+    int? coinReward,
+    String? giftDescription,
+    bool? isUserPlaced,
   }) {
     return OrderEntity(
       id: id ?? this.id,
@@ -136,6 +148,10 @@ class OrderEntity {
       trackingNumber: trackingNumber ?? this.trackingNumber,
       estimatedDelivery: estimatedDelivery ?? this.estimatedDelivery,
       paymentMethod: paymentMethod ?? this.paymentMethod,
+      couponCode: couponCode ?? this.couponCode,
+      coinReward: coinReward ?? this.coinReward,
+      giftDescription: giftDescription ?? this.giftDescription,
+      isUserPlaced: isUserPlaced ?? this.isUserPlaced,
     );
   }
 }

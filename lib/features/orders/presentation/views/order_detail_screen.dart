@@ -607,6 +607,20 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               '- ${_currentOrder.discountAmount.toInt()}₫',
               isGreen: true,
             ),
+          if (_currentOrder.couponCode != null)
+            _buildReceiptRow('Mã ưu đãi', _currentOrder.couponCode!),
+          if (_currentOrder.coinReward > 0)
+            _buildReceiptRow(
+              'Xu đã hoàn',
+              '+${_currentOrder.coinReward} xu',
+              isGreen: true,
+            ),
+          if (_currentOrder.giftDescription != null)
+            _buildReceiptRow(
+              'Quà tặng',
+              _currentOrder.giftDescription!,
+              isGreen: true,
+            ),
           const Divider(height: 20, color: Color(0xFFF0EBE3)),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

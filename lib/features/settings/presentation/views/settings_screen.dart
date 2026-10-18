@@ -4,9 +4,7 @@ import '../../../../core/l10n/generated/app_localizations.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../address/presentation/views/address_book_screen.dart';
-import '../../../auth/presentation/views/auth_screen.dart';
 import '../../../payment_methods/presentation/views/payment_methods_screen.dart';
-import '../../../../core/widgets/no_internet_screen.dart';
 import '../../domain/entities/user_settings.dart';
 import '../viewmodels/settings_viewmodel.dart';
 
@@ -289,10 +287,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showChangePasswordDialog() {
-    final oldPassCtrl = TextEditingController();
-    final newPassCtrl = TextEditingController();
-    final confirmPassCtrl = TextEditingController();
-
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -306,78 +300,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             color: AppColors.textPrimary,
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildTextField(oldPassCtrl, 'Mật khẩu hiện tại', obscure: true),
-            const SizedBox(height: 10),
-            _buildTextField(
-              newPassCtrl,
-              'Mật khẩu mới (tối thiểu 6 ký tự)',
-              obscure: true,
-            ),
-            const SizedBox(height: 10),
-            _buildTextField(
-              confirmPassCtrl,
-              'Xác nhận mật khẩu mới',
-              obscure: true,
-            ),
-          ],
+        content: const Text(
+          'Chức năng đổi mật khẩu cần dịch vụ tài khoản. Bản demo chưa xử lý mật khẩu.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text(
-              'Huỷ',
+              'Đã hiểu',
               style: TextStyle(
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Đổi mật khẩu thành công! 🔐'),
-                  backgroundColor: AppColors.brandBlack,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.brandBlack,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            child: const Text(
-              'Cập nhật',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
         ],
-      ),
-    );
-  }
-
-  void _clearCache() {
-    ref.read(settingsViewModelProvider.notifier).clearCache();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Đã dọn dẹp sạch sẽ bộ nhớ đệm cache (0.0 MB) 🧹'),
-        backgroundColor: AppColors.brandBlack,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -389,7 +326,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text(
-          'Yêu cầu xoá tài khoản?',
+          'Xoá tài khoản',
           style: TextStyle(
             fontSize: 16.5,
             fontWeight: FontWeight.w900,
@@ -397,7 +334,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
         content: const Text(
-          'Hành động này sẽ xoá vĩnh viễn dữ liệu tài khoản, lịch sử đơn hàng, điểm xu NÉORA và các voucher VIP chưa sử dụng. Hành động này không thể hoàn tác.',
+          'Chức năng xoá tài khoản cần dịch vụ tài khoản. Bản demo chưa thực hiện xoá dữ liệu.',
           style: TextStyle(
             fontSize: 13,
             color: AppColors.textSecondary,
@@ -408,33 +345,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text(
-              'Giữ tài khoản',
+              'Đã hiểu',
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
               ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pushAndRemoveUntil(
-                context,
-                AppRouter.page(builder: (_) => const AuthScreen()),
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.saleRed,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            child: const Text(
-              'Xác nhận xoá',
-              style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -620,24 +535,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildSettingTile(
               icon: Icons.lock_outline_rounded,
               title: 'Đổi mật khẩu',
-              subtitle: 'Cập nhật định kỳ để bảo vệ tài khoản',
+              subtitle: 'Chưa khả dụng trong bản demo',
               onTap: _showChangePasswordDialog,
             ),
             const Divider(height: 1, color: Color(0xFFF0EBE3)),
             _buildSwitchTile(
               icon: Icons.fingerprint_rounded,
               title: 'Đăng nhập sinh trắc học',
-              subtitle: 'Mở khoá bằng FaceID / Vân tay',
-              value: settings.enableBiometrics,
-              onChanged: settingsNotifier.setBiometrics,
+              subtitle: 'Cần tích hợp xác thực thiết bị',
+              value: false,
+              onChanged: null,
             ),
             const Divider(height: 1, color: Color(0xFFF0EBE3)),
             _buildSwitchTile(
               icon: Icons.security_rounded,
               title: 'Xác thực 2 yếu tố (2FA)',
-              subtitle: 'Yêu cầu mã OTP SMS khi đăng nhập mới',
-              value: settings.enableTwoFactor,
-              onChanged: settingsNotifier.setTwoFactor,
+              subtitle: 'Cần dịch vụ OTP và tài khoản',
+              value: false,
+              onChanged: null,
             ),
           ]),
 
@@ -701,28 +616,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const Divider(height: 1, color: Color(0xFFF0EBE3)),
             _buildSettingTile(
-              icon: Icons.cleaning_services_outlined,
-              title: 'Dọn dẹp bộ nhớ đệm',
-              trailingText: '${settings.cacheSizeMb.toStringAsFixed(1)} MB',
-              onTap: _clearCache,
-            ),
-            const Divider(height: 1, color: Color(0xFFF0EBE3)),
-            _buildSettingTile(
               icon: Icons.info_outline_rounded,
               title: 'Phiên bản ứng dụng',
               trailingText: '1.0.0+1',
               onTap: _showVersionInfo,
-            ),
-            const Divider(height: 1, color: Color(0xFFF0EBE3)),
-            _buildSettingTile(
-              icon: Icons.wifi_off_rounded,
-              title: 'Màn hình ngoại tuyến & Bảo trì',
-              subtitle: 'Kiểm tra giao diện mất kết nối hoặc bảo trì',
-              onTap: () {
-                Navigator.of(context).push(
-                  AppRouter.page(builder: (_) => const NoInternetScreen()),
-                );
-              },
             ),
           ]),
 
@@ -733,7 +630,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildSettingTile(
               icon: Icons.delete_outline_rounded,
               title: 'Yêu cầu xoá tài khoản',
-              subtitle: 'Xoá vĩnh viễn tài khoản và dữ liệu thành viên',
+              subtitle: 'Chưa khả dụng trong bản demo',
               isDanger: true,
               onTap: _showDeleteAccountDialog,
             ),
@@ -937,7 +834,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required String title,
     required String subtitle,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    required ValueChanged<bool>? onChanged,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),

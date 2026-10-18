@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -9,22 +8,7 @@ import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
 import '../../../home/domain/entities/product_entity.dart';
 import '../../../home/presentation/viewmodels/home_viewmodel.dart';
 import '../../../product_detail/presentation/views/product_detail_screen.dart';
-
-class FlashSaleTimeSlot {
-  final String time;
-  final String status;
-  final bool isActive;
-  final bool isUpcoming;
-  final bool isPast;
-
-  const FlashSaleTimeSlot({
-    required this.time,
-    required this.status,
-    this.isActive = false,
-    this.isUpcoming = false,
-    this.isPast = false,
-  });
-}
+import '../../domain/entities/flash_sale_campaign.dart';
 
 class FlashSaleScreen extends ConsumerStatefulWidget {
   const FlashSaleScreen({super.key});
@@ -34,35 +18,23 @@ class FlashSaleScreen extends ConsumerStatefulWidget {
 }
 
 class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
-  int _selectedSlotIndex = 1; // Default to 12:00 (active)
-  late int _remainingSeconds;
+  late int _selectedSlotIndex;
+  DateTime _now = DateTime.now();
+  bool _userSelectedSlot = false;
   Timer? _countdownTimer;
-
-  final Set<String> _reminderSlots = {};
-
-  final List<FlashSaleTimeSlot> _slots = const [
-    FlashSaleTimeSlot(time: '09:00', status: 'Đã kết thúc', isPast: true),
-    FlashSaleTimeSlot(time: '12:00', status: 'Đang diễn ra 🔥', isActive: true),
-    FlashSaleTimeSlot(
-      time: '18:00',
-      status: 'Sắp diễn ra 🔔',
-      isUpcoming: true,
-    ),
-    FlashSaleTimeSlot(
-      time: '21:00',
-      status: 'Sắp diễn ra 🔔',
-      isUpcoming: true,
-    ),
-  ];
 
   @override
   void initState() {
     super.initState();
-    _remainingSeconds = 9520; // 02h 38m 40s
+    _selectedSlotIndex = FlashSaleCampaign.currentOrNextIndex(_now);
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && _remainingSeconds > 0) {
-        setState(() => _remainingSeconds--);
-      }
+      if (!mounted) return;
+      setState(() {
+        _now = DateTime.now();
+        if (!_userSelectedSlot) {
+          _selectedSlotIndex = FlashSaleCampaign.currentOrNextIndex(_now);
+        }
+      });
     });
   }
 
@@ -85,48 +57,19 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
     return '${buffer.toString()}₫';
   }
 
-  void _toggleReminder(String time) {
-    setState(() {
-      if (_reminderSlots.contains(time)) {
-        _reminderSlots.remove(time);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Đã huỷ nhắc nhở khung giờ $time 🔕'),
-            backgroundColor: AppColors.brandBlack,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      } else {
-        _reminderSlots.add(time);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Đã đặt nhắc nhở khung giờ $time thành công! 🔔 NÉORA sẽ báo trước 10 phút.',
-            ),
-            backgroundColor: AppColors.brandBlack,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
     final allProducts = homeState.allProducts;
 
-    final hours = _remainingSeconds ~/ 3600;
-    final minutes = (_remainingSeconds % 3600) ~/ 60;
-    final seconds = _remainingSeconds % 60;
-
-    final selectedSlot = _slots[_selectedSlotIndex];
+    final selectedSlot = FlashSaleCampaign.slots[_selectedSlotIndex];
+    final remainingSeconds = selectedSlot.untilBoundary(_now).inSeconds;
+    final hours = remainingSeconds ~/ 3600;
+    final minutes = (remainingSeconds % 3600) ~/ 60;
+    final seconds = remainingSeconds % 60;
+    final flashProducts = allProducts
+        .where((product) => FlashSaleCampaign.offers.containsKey(product.id))
+        .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -146,29 +89,6 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
               ),
               onPressed: () => Navigator.pop(context),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(
-                  Icons.share_outlined,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                        'Đã sao chép liên kết Flash Sale NÉORA ✨',
-                      ),
-                      backgroundColor: AppColors.brandBlack,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -232,7 +152,7 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Ưu đãi lên đến -50%',
+                          'Ưu đãi trong ngày',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -241,7 +161,7 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                           ),
                         ),
                         // Live Flip Clock
-                        if (selectedSlot.isActive)
+                        if (selectedSlot.isActiveAt(_now))
                           Row(
                             children: [
                               _buildTimeBox(_formatPad(hours)),
@@ -282,7 +202,7 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              selectedSlot.isPast
+                              selectedSlot.isPastAt(_now)
                                   ? 'ĐÃ KẾT THÚC'
                                   : 'SẮP DIỄN RA',
                               style: const TextStyle(
@@ -312,14 +232,18 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   child: Row(
-                    children: List.generate(_slots.length, (index) {
-                      final slot = _slots[index];
+                    children: List.generate(FlashSaleCampaign.slots.length, (
+                      index,
+                    ) {
+                      final slot = FlashSaleCampaign.slots[index];
                       final isSelected = _selectedSlotIndex == index;
 
                       return GestureDetector(
                         onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedSlotIndex = index);
+                          setState(() {
+                            _selectedSlotIndex = index;
+                            _userSelectedSlot = true;
+                          });
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -344,7 +268,7 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                slot.time,
+                                slot.label,
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
@@ -355,12 +279,16 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                slot.status,
+                                slot.isActiveAt(_now)
+                                    ? 'Đang diễn ra 🔥'
+                                    : slot.isPastAt(_now)
+                                    ? 'Đã kết thúc'
+                                    : 'Sắp diễn ra',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: isSelected
-                                      ? (slot.isActive
+                                      ? (slot.isActiveAt(_now)
                                             ? AppColors.camelGold
                                             : Colors.white70)
                                       : AppColors.textMuted,
@@ -377,109 +305,18 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
             ),
           ),
 
-          // 3. Voucher Strip Promo
-          SliverToBoxAdapter(
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.softPeach,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.coralOrange,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.confirmation_num_outlined,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'MÃ: FLASH50 — Giảm 50.000₫',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.brandBlack,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Áp dụng đơn từ 299K trong khung giờ flash sale',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () {
-                      Clipboard.setData(const ClipboardData(text: 'FLASH50'));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            'Đã sao chép mã FLASH50! Nhập khi thanh toán 🏷️',
-                          ),
-                          backgroundColor: AppColors.brandBlack,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.coralOrange),
-                      ),
-                      child: const Text(
-                        'LƯU MÃ',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.coralOrange,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
           // 4. Products List
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate((context, index) {
-                final product = allProducts[index % allProducts.length];
+                final product = flashProducts[index];
                 return _buildFlashSaleProductCard(
                   context,
                   product,
-                  index,
                   selectedSlot,
                 );
-              }, childCount: allProducts.isNotEmpty ? allProducts.length : 0),
+              }, childCount: flashProducts.length),
             ),
           ),
         ],
@@ -516,24 +353,15 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
   Widget _buildFlashSaleProductCard(
     BuildContext context,
     ProductEntity product,
-    int index,
-    FlashSaleTimeSlot slot,
+    FlashSaleSlot slot,
   ) {
-    // Generate realistic stock & discount data
-    final discounts = [35, 45, 50, 40, 30, 48];
-    final soldPercents = [86, 92, 74, 95, 68, 88];
-    final remainingCount = [4, 2, 7, 1, 9, 3];
-
-    final discount = discounts[index % discounts.length];
-    final soldPercent = soldPercents[index % soldPercents.length];
-    final remaining = remainingCount[index % remainingCount.length];
-
-    final originalPrice = product.originalPrice ?? (product.price * 1.5);
-    final salePrice = product.price * (1 - discount / 100);
-
-    final isSlotActive = slot.isActive;
-    final isSlotUpcoming = slot.isUpcoming;
-    final hasReminder = _reminderSlots.contains(slot.time);
+    final offer = FlashSaleCampaign.offers[product.id]!;
+    final discount = FlashSaleCampaign.discountPercent(product);
+    final soldPercent = (offer.soldFractionAt(_now, slot) * 100).round();
+    final remaining = offer.remainingAt(_now, slot);
+    final originalPrice = product.originalPrice;
+    final isSlotActive = slot.isActiveAt(_now);
+    final isSlotUpcoming = slot.isUpcomingAt(_now);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -579,28 +407,29 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.saleRed,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '-$discount%',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w900,
+                  if (discount > 0)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.saleRed,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '-$discount%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
 
@@ -628,7 +457,7 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          _formatVnd(salePrice),
+                          _formatVnd(product.price),
                           style: const TextStyle(
                             fontSize: 16.5,
                             fontWeight: FontWeight.w900,
@@ -636,14 +465,16 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          _formatVnd(originalPrice),
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: AppColors.textMuted,
-                            decoration: TextDecoration.lineThrough,
+                        if (originalPrice != null &&
+                            originalPrice > product.price)
+                          Text(
+                            _formatVnd(originalPrice),
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.textMuted,
+                              decoration: TextDecoration.lineThrough,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -679,7 +510,9 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                                   horizontal: 4,
                                 ),
                                 child: Text(
-                                  remaining <= 3
+                                  remaining == 0
+                                      ? 'Đã hết suất'
+                                      : remaining <= 3
                                       ? '🔥 Chỉ còn $remaining suất'
                                       : 'Đã bán $soldPercent%',
                                   style: const TextStyle(
@@ -706,7 +539,7 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        if (isSlotActive)
+                        if (isSlotActive && remaining > 0)
                           ElevatedButton(
                             onPressed: () {
                               ref
@@ -752,52 +585,6 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                               ],
                             ),
                           )
-                        else if (isSlotUpcoming)
-                          OutlinedButton(
-                            onPressed: () => _toggleReminder(slot.time),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: hasReminder
-                                  ? AppColors.camelGold
-                                  : AppColors.brandBlack,
-                              side: BorderSide(
-                                color: hasReminder
-                                    ? AppColors.camelGold
-                                    : const Color(0xFFD6CFC7),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  hasReminder
-                                      ? Icons.notifications_active_rounded
-                                      : Icons.notifications_none_rounded,
-                                  size: 16,
-                                  color: hasReminder
-                                      ? AppColors.camelGold
-                                      : AppColors.brandBlack,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  hasReminder ? 'ĐÃ ĐẶT NHẮC' : 'NHẮC TÔI',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 11.5,
-                                    color: hasReminder
-                                        ? AppColors.camelGold
-                                        : AppColors.brandBlack,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
                         else
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -808,9 +595,13 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                               color: const Color(0xFFF2ECE6),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text(
-                              'HẾT GIỜ SALE',
-                              style: TextStyle(
+                            child: Text(
+                              isSlotUpcoming
+                                  ? 'SẮP DIỄN RA'
+                                  : remaining == 0 && isSlotActive
+                                  ? 'HẾT SUẤT'
+                                  : 'HẾT GIỜ SALE',
+                              style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textMuted,

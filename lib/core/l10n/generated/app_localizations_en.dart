@@ -142,7 +142,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderNumberLabel => 'Order number';
 
   @override
-  String get paidWithLabel => 'Paid with';
+  String get paidWithLabel => 'Payment method';
 
   @override
   String get arrivingLabel => 'Arriving';
@@ -163,7 +163,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guestAction => 'Guest';
 
   @override
-  String get authLoginSuccess => 'Signed in successfully! Welcome to NÉORA.';
+  String get authLoginSuccess =>
+      'Entered the NÉORA demo. No real sign-in session was created.';
 
   @override
   String get forgotPasswordTitle => 'Reset your password';
@@ -280,9 +281,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startShoppingAction => 'START SHOPPING';
 
   @override
-  String get loadSampleCartAction => 'Load sample cart (2 items)';
-
-  @override
   String get freeShippingReached =>
       '🎉 Great! Your order qualifies for free shipping!';
 
@@ -311,6 +309,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couponAppliedMessage => 'Promo code applied! 🎉';
 
   @override
+  String get couponRejectedMessage =>
+      'This promo code is invalid or its conditions are not met.';
+
+  @override
   String get applyAction => 'Apply';
 
   @override
@@ -318,6 +320,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get totalPaymentCartLabel => 'Total payment';
+
+  @override
+  String get shippingCalculatedAtCheckoutLabel => 'Calculated at checkout';
+
+  @override
+  String get cartTotalBeforeShippingLabel => 'Subtotal after discounts';
 
   @override
   String proceedToOrderAction(int count) {
@@ -570,10 +578,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String authResetLinkSent(String email) {
-    return 'A password reset link was sent to $email';
+    return 'The demo did not send a password reset email to $email.';
   }
 
   @override
   String get authRegistrationComplete =>
-      'Account created! You can sign in now.';
+      'Registration was simulated. No account was created.';
+
+  @override
+  String get demoOrderNotice => 'Saved on this device; not sent to a store.';
+
+  @override
+  String get paymentUnavailableLabel => 'Set up to use';
+
+  @override
+  String get mockPaymentLabel => 'Simulated payment';
+
+  @override
+  String mockCardEnding(String lastFour) {
+    return 'Simulated card •••• $lastFour';
+  }
+
+  @override
+  String get deviceWalletPaymentTitle => 'Apple Pay / Google Pay';
+
+  @override
+  String get managePaymentMethodsAction => 'Manage payment methods';
 }

@@ -42,10 +42,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
     'Đóng gói NÉORA sang trọng 🎁',
   ];
 
-  final List<String> _uploadedPhotos = [
-    'assets/images/real/lookbook_summer_1.jpg',
-    'assets/images/real/lookbook_summer_2.jpg',
-  ];
+  final List<String> _uploadedPhotos = [];
 
   String get _ratingLabel {
     switch (_rating) {

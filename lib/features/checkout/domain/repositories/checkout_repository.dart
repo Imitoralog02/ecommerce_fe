@@ -1,5 +1,6 @@
-import '../entities/checkout_selection.dart';
+import '../../../orders/domain/entities/order_entity.dart';
+import '../entities/checkout_request.dart';
 
 abstract interface class CheckoutRepository {
-  Future<void> placeOrder(CheckoutSelection selection);
+  Future<OrderEntity> placeOrder(CheckoutRequest request);
 }

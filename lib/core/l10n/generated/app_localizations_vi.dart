@@ -141,7 +141,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get orderNumberLabel => 'Mã đơn hàng';
 
   @override
-  String get paidWithLabel => 'Thanh toán bằng';
+  String get paidWithLabel => 'Phương thức thanh toán';
 
   @override
   String get arrivingLabel => 'Dự kiến giao';
@@ -163,7 +163,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get authLoginSuccess =>
-      'Đăng nhập thành công! Chào mừng bạn đến với NÉORA.';
+      'Đã vào chế độ demo của NÉORA. Chưa có phiên đăng nhập thật.';
 
   @override
   String get forgotPasswordTitle => 'Khôi phục mật khẩu';
@@ -281,9 +281,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get startShoppingAction => 'BẮT ĐẦU MUA SẮM';
 
   @override
-  String get loadSampleCartAction => 'Tải giỏ hàng mẫu (2 sản phẩm)';
-
-  @override
   String get freeShippingReached =>
       '🎉 Tuyệt vời! Bạn đã được FREESHIP toàn quốc!';
 
@@ -312,6 +309,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get couponAppliedMessage => 'Đã áp dụng mã ưu đãi thành công! 🎉';
 
   @override
+  String get couponRejectedMessage =>
+      'Mã ưu đãi không hợp lệ hoặc chưa đủ điều kiện.';
+
+  @override
   String get applyAction => 'Áp dụng';
 
   @override
@@ -319,6 +320,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get totalPaymentCartLabel => 'Tổng thanh toán';
+
+  @override
+  String get shippingCalculatedAtCheckoutLabel => 'Tính khi đặt hàng';
+
+  @override
+  String get cartTotalBeforeShippingLabel => 'Tạm tính sau ưu đãi';
 
   @override
   String proceedToOrderAction(int count) {
@@ -568,10 +575,30 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String authResetLinkSent(String email) {
-    return 'Liên kết đặt lại mật khẩu đã được gửi đến $email';
+    return 'Bản demo không gửi email đặt lại mật khẩu đến $email.';
   }
 
   @override
   String get authRegistrationComplete =>
-      'Tạo tài khoản thành công! Bạn có thể đăng nhập ngay.';
+      'Đã mô phỏng đăng ký. Chưa có tài khoản nào được tạo.';
+
+  @override
+  String get demoOrderNotice => 'Đã lưu trên thiết bị; chưa gửi đến cửa hàng.';
+
+  @override
+  String get paymentUnavailableLabel => 'Thiết lập để sử dụng';
+
+  @override
+  String get mockPaymentLabel => 'Thanh toán mô phỏng';
+
+  @override
+  String mockCardEnding(String lastFour) {
+    return 'Thẻ mô phỏng •••• $lastFour';
+  }
+
+  @override
+  String get deviceWalletPaymentTitle => 'Apple Pay / Google Pay';
+
+  @override
+  String get managePaymentMethodsAction => 'Quản lý phương thức thanh toán';
 }

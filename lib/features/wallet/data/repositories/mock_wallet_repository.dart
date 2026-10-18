@@ -3,7 +3,8 @@ import '../../domain/entities/wallet_snapshot.dart';
 import '../../domain/repositories/wallet_repository.dart';
 
 class MockWalletRepository implements WalletRepository {
-  MockWalletRepository() : _snapshot = _initialSnapshot();
+  MockWalletRepository({DateTime? now})
+    : _snapshot = _initialSnapshot(now ?? DateTime.now());
 
   WalletSnapshot _snapshot;
 
@@ -13,18 +14,24 @@ class MockWalletRepository implements WalletRepository {
   @override
   void save(WalletSnapshot snapshot) => _snapshot = snapshot;
 
-  static WalletSnapshot _initialSnapshot() => WalletSnapshot(
+  static WalletSnapshot _initialSnapshot(DateTime now) => WalletSnapshot(
     coinBalance: 2480,
     cashBalance: 150000,
     memberTier: 'Thành viên Vàng',
     coinsToNextTier: 520,
     tierProgress: 0.72,
     checkedInToday: false,
-    vouchers: _initialVouchers(),
+    lastCheckInDay: null,
+    vouchers: _initialVouchers(now),
     transactions: _initialTransactions(),
   );
 
-  static List<VoucherEntity> _initialVouchers() => const [
+  static String _expiryInDays(DateTime now, int days) {
+    final date = DateTime(now.year, now.month, now.day + days);
+    return 'HSD: ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  static List<VoucherEntity> _initialVouchers(DateTime now) => [
     VoucherEntity(
       id: 'v_freeship_all',
       code: 'FREESHIP40K',
@@ -34,7 +41,7 @@ class MockWalletRepository implements WalletRepository {
       discountLabel: 'SHIP',
       type: VoucherType.shipping,
       maxDiscount: 40000,
-      expiryDate: 'HSD: 3 ngày',
+      expiryDate: _expiryInDays(now, 3),
       isMint: true,
       tag: 'HOT',
       isSaved: true,
@@ -49,7 +56,7 @@ class MockWalletRepository implements WalletRepository {
       type: VoucherType.discount,
       minOrderValue: 299000,
       maxDiscount: 30000,
-      expiryDate: 'HSD: 5 ngày',
+      expiryDate: _expiryInDays(now, 5),
       tag: 'BÁN CHẠY',
       isSaved: true,
     ),
@@ -63,7 +70,7 @@ class MockWalletRepository implements WalletRepository {
       type: VoucherType.vipOnly,
       minOrderValue: 499000,
       maxDiscount: 80000,
-      expiryDate: 'HSD: 30/11/2026',
+      expiryDate: _expiryInDays(now, 42),
       tag: 'ĐỘC QUYỀN VIP',
       isSaved: true,
     ),
@@ -74,8 +81,8 @@ class MockWalletRepository implements WalletRepository {
       description: 'Hoàn 5% xu NÉORA không giới hạn cho mọi đơn',
       discountValue: '5%',
       discountLabel: 'XU',
-      type: VoucherType.discount,
-      expiryDate: 'HSD: 15 ngày',
+      type: VoucherType.coinReward,
+      expiryDate: _expiryInDays(now, 15),
       isMint: true,
     ),
     VoucherEntity(
@@ -88,20 +95,20 @@ class MockWalletRepository implements WalletRepository {
       type: VoucherType.shipping,
       minOrderValue: 250000,
       maxDiscount: 25000,
-      expiryDate: 'HSD: 7 ngày',
+      expiryDate: _expiryInDays(now, 7),
       isMint: true,
     ),
     VoucherEntity(
       id: 'v_order_50k',
       code: 'NEORA50K',
       title: 'Giảm 50K đơn từ 599K',
-      description: 'Áp dụng cho dòng sản phẩm NÉORA Luxury',
+      description: 'Đơn từ 599K có sản phẩm NÉORA Collection',
       discountValue: '50K',
       discountLabel: 'GIẢM',
       type: VoucherType.discount,
       minOrderValue: 599000,
       maxDiscount: 50000,
-      expiryDate: 'HSD: 10 ngày',
+      expiryDate: _expiryInDays(now, 10),
     ),
     VoucherEntity(
       id: 'v_vip_diamond',
@@ -113,7 +120,7 @@ class MockWalletRepository implements WalletRepository {
       type: VoucherType.vipOnly,
       minOrderValue: 999000,
       maxDiscount: 150000,
-      expiryDate: 'HSD: 31/12/2026',
+      expiryDate: _expiryInDays(now, 73),
       tag: 'ĐỘC QUYỀN VIP',
     ),
     VoucherEntity(
@@ -126,20 +133,20 @@ class MockWalletRepository implements WalletRepository {
       type: VoucherType.shipping,
       minOrderValue: 500000,
       maxDiscount: 50000,
-      expiryDate: 'HSD: 12 ngày',
+      expiryDate: _expiryInDays(now, 12),
       isMint: true,
     ),
     VoucherEntity(
       id: 'v_order_100k',
       code: 'NEORA100K',
       title: 'Giảm 100K đơn từ 1.200K',
-      description: 'Ưu đãi trang phục dạ tiệc & đồ may đo',
+      description: 'Đơn từ 1.200K có sản phẩm Đầm',
       discountValue: '100K',
       discountLabel: 'GIẢM',
       type: VoucherType.discount,
       minOrderValue: 1200000,
       maxDiscount: 100000,
-      expiryDate: 'HSD: 20 ngày',
+      expiryDate: _expiryInDays(now, 20),
     ),
     VoucherEntity(
       id: 'v_freeship_express',
@@ -150,7 +157,7 @@ class MockWalletRepository implements WalletRepository {
       discountLabel: 'SHIP',
       type: VoucherType.shipping,
       maxDiscount: 35000,
-      expiryDate: 'HSD: 14 ngày',
+      expiryDate: _expiryInDays(now, 14),
       isMint: true,
     ),
     VoucherEntity(
@@ -162,7 +169,7 @@ class MockWalletRepository implements WalletRepository {
       discountLabel: 'TẶNG',
       type: VoucherType.vipOnly,
       minOrderValue: 1500000,
-      expiryDate: 'HSD: 31/12/2026',
+      expiryDate: _expiryInDays(now, 73),
       isMint: true,
       tag: 'ĐỘC QUYỀN VIP',
     ),
@@ -170,13 +177,13 @@ class MockWalletRepository implements WalletRepository {
       id: 'v_order_new10',
       code: 'NEORANEW10',
       title: 'Giảm 10% bộ sưu tập mới',
-      description: 'Áp dụng cho dòng sản phẩm Thu Đông 2026',
+      description: 'Đơn từ 399K có sản phẩm gắn nhãn MỚI',
       discountValue: '10%',
       discountLabel: 'GIẢM',
       type: VoucherType.discount,
       minOrderValue: 399000,
       maxDiscount: 70000,
-      expiryDate: 'HSD: 30 ngày',
+      expiryDate: _expiryInDays(now, 30),
     ),
   ];
 

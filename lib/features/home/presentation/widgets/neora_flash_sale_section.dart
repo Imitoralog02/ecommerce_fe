@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/product_entity.dart';
+import '../../../shop/domain/entities/flash_sale_campaign.dart';
 
 class NeoraFlashSaleSection extends StatefulWidget {
   final List<ProductEntity> products;
@@ -20,21 +21,14 @@ class NeoraFlashSaleSection extends StatefulWidget {
 }
 
 class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
-  late int _remainingSeconds;
+  DateTime _now = DateTime.now();
   Timer? _countdownTimer;
-
-  static const List<int> _soldPercentages = [86, 72, 64, 91, 45, 58];
 
   @override
   void initState() {
     super.initState();
-    _remainingSeconds = 9520; // ~2h 38m 40s
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && _remainingSeconds > 0) {
-        setState(() {
-          _remainingSeconds--;
-        });
-      }
+      if (mounted) setState(() => _now = DateTime.now());
     });
   }
 
@@ -63,11 +57,16 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
   Widget build(BuildContext context) {
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final cardHeight = 232.0 + ((textScale - 1) * 32).clamp(0, 32);
-    final hours = _remainingSeconds ~/ 3600;
-    final minutes = (_remainingSeconds % 3600) ~/ 60;
-    final seconds = _remainingSeconds % 60;
+    final slot = FlashSaleCampaign.currentOrNext(_now);
+    final remainingSeconds = slot.untilBoundary(_now).inSeconds;
+    final hours = remainingSeconds ~/ 3600;
+    final minutes = (remainingSeconds % 3600) ~/ 60;
+    final seconds = remainingSeconds % 60;
 
-    final displayProducts = widget.products.take(6).toList();
+    final displayProducts = widget.products
+        .where((product) => FlashSaleCampaign.offers.containsKey(product.id))
+        .take(6)
+        .toList();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -128,6 +127,13 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                Text(
+                  slot.isActiveAt(_now)
+                      ? 'Kết thúc lúc ${slot.endHour == 24 ? '00' : slot.endHour.toString().padLeft(2, '0')}:00'
+                      : 'Bắt đầu lúc ${slot.label}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                ),
+                const SizedBox(height: 4),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -173,19 +179,11 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
               separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 final product = displayProducts[index];
-                final soldPercent =
-                    _soldPercentages[index % _soldPercentages.length];
-                final origPrice =
-                    product.originalPrice ?? (product.price * 1.35);
-                final discount =
-                    (100 -
-                            (product.price /
-                                (origPrice > 0
-                                    ? origPrice
-                                    : product.price * 1.35) *
-                                100))
-                        .round()
-                        .clamp(20, 75);
+                final offer = FlashSaleCampaign.offers[product.id]!;
+                final soldPercent = (offer.soldFractionAt(_now, slot) * 100)
+                    .round();
+                final remaining = offer.remainingAt(_now, slot);
+                final discount = FlashSaleCampaign.discountPercent(product);
 
                 return GestureDetector(
                   onTap: () => widget.onProductTap?.call(product),
@@ -234,28 +232,29 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                               ),
                             ),
                             // Discount badge
-                            Positioned(
-                              top: 6,
-                              left: 6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.saleRed,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '-$discount%',
-                                  style: const TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
+                            if (discount > 0)
+                              Positioned(
+                                top: 6,
+                                left: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.saleRed,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '-$discount%',
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
 
@@ -305,7 +304,11 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                               ),
                               Center(
                                 child: Text(
-                                  '🔥 Đã bán $soldPercent%',
+                                  slot.isUpcomingAt(_now)
+                                      ? 'Còn $remaining suất'
+                                      : remaining == 0
+                                      ? 'Đã hết suất'
+                                      : '🔥 Đã bán $soldPercent%',
                                   style: const TextStyle(
                                     fontSize: 9.5,
                                     fontWeight: FontWeight.w900,

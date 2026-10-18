@@ -11,6 +11,17 @@ import 'features/onboarding/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'features/settings/presentation/viewmodels/settings_viewmodel.dart';
 import 'features/settings/data/repositories/shared_preferences_settings_repository.dart';
 import 'features/settings/di/settings_providers.dart';
+import 'features/address/data/repositories/shared_preferences_address_repository.dart';
+import 'features/address/di/address_providers.dart';
+import 'features/cart/data/repositories/shared_preferences_cart_repository.dart';
+import 'features/cart/di/cart_providers.dart';
+import 'features/home/data/repositories/mock_product_repository.dart';
+import 'features/orders/data/repositories/shared_preferences_order_repository.dart';
+import 'features/orders/di/order_providers.dart';
+import 'features/wishlist/data/repositories/shared_preferences_wishlist_repository.dart';
+import 'features/wishlist/di/wishlist_providers.dart';
+import 'features/wallet/data/repositories/shared_preferences_wallet_repository.dart';
+import 'features/wallet/di/wallet_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +40,27 @@ Future<void> main() async {
       overrides: [
         settingsRepositoryProvider.overrideWithValue(
           SharedPreferencesSettingsRepository(preferences),
+        ),
+        cartRepositoryProvider.overrideWithValue(
+          SharedPreferencesCartRepository(preferences),
+        ),
+        addressRepositoryProvider.overrideWithValue(
+          SharedPreferencesAddressRepository(preferences),
+        ),
+        wishlistRepositoryProvider.overrideWithValue(
+          SharedPreferencesWishlistRepository(
+            preferences,
+            MockProductRepository.mockCatalog,
+          ),
+        ),
+        orderRepositoryProvider.overrideWithValue(
+          SharedPreferencesOrderRepository(
+            preferences,
+            MockProductRepository.mockCatalog,
+          ),
+        ),
+        walletRepositoryProvider.overrideWithValue(
+          SharedPreferencesWalletRepository(preferences),
         ),
       ],
       child: const NeoraApp(),

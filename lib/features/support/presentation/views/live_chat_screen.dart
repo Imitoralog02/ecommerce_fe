@@ -158,7 +158,7 @@ class _LiveChatScreenState extends ConsumerState<LiveChatScreen>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: Image.asset(
-                      'assets/images/real/onb_summer.jpg',
+                      'assets/images/real/onb_shopping.jpg',
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => const Icon(
                         Icons.person,
@@ -410,7 +410,7 @@ class _LiveChatScreenState extends ConsumerState<LiveChatScreen>
                 width: 28,
                 height: 28,
                 child: Image.asset(
-                  'assets/images/real/onb_summer.jpg',
+                  'assets/images/real/onb_shopping.jpg',
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => const Icon(Icons.person, size: 16),
                 ),
@@ -541,7 +541,7 @@ class _LiveChatScreenState extends ConsumerState<LiveChatScreen>
               width: 28,
               height: 28,
               child: Image.asset(
-                'assets/images/real/onb_summer.jpg',
+                'assets/images/real/onb_shopping.jpg',
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => const Icon(Icons.person, size: 16),
               ),

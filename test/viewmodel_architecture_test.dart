@@ -1,8 +1,11 @@
 import 'package:ecommerce_fe/features/auth/domain/repositories/auth_repository.dart';
 import 'package:ecommerce_fe/features/auth/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:ecommerce_fe/features/checkout/domain/entities/checkout_selection.dart';
+import 'package:ecommerce_fe/features/checkout/domain/entities/checkout_request.dart';
 import 'package:ecommerce_fe/features/checkout/domain/repositories/checkout_repository.dart';
 import 'package:ecommerce_fe/features/checkout/presentation/viewmodels/checkout_viewmodel.dart';
+import 'package:ecommerce_fe/features/cart/presentation/viewmodels/cart_viewmodel.dart';
+import 'package:ecommerce_fe/features/orders/domain/entities/order_entity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -28,13 +31,24 @@ class _FakeAuthRepository implements AuthRepository {
 }
 
 class _FakeCheckoutRepository implements CheckoutRepository {
-  CheckoutSelection? receivedSelection;
+  CheckoutRequest? receivedRequest;
   bool shouldFail = false;
 
   @override
-  Future<void> placeOrder(CheckoutSelection selection) async {
-    receivedSelection = selection;
+  Future<OrderEntity> placeOrder(CheckoutRequest request) async {
+    receivedRequest = request;
     if (shouldFail) throw Exception('mock checkout error');
+    return OrderEntity(
+      id: 'NEO-TEST',
+      orderDate: DateTime(2026, 10, 18),
+      status: OrderStatus.pendingConfirmation,
+      items: request.items,
+      subtotal: request.quote.subtotal,
+      shippingFee: request.quote.shippingFee,
+      discountAmount: request.quote.discount,
+      totalAmount: request.quote.total,
+      shippingAddress: request.address,
+    );
   }
 }
 
@@ -81,17 +95,26 @@ void main() {
       addTearDown(container.dispose);
 
       final viewModel = container.read(checkoutViewModelProvider.notifier);
+      expect(
+        container.read(checkoutViewModelProvider).paymentType,
+        PaymentType.cashOnDelivery,
+      );
+      container.read(cartViewModelProvider.notifier).restoreVideoOrder();
       viewModel.setShipping(ShippingType.standard);
       viewModel.setPayment(PaymentType.cashOnDelivery);
 
-      expect(await viewModel.placeOrder(), isTrue);
-      expect(repository.receivedSelection?.shippingType, ShippingType.standard);
+      expect(await viewModel.placeOrder(), isNotNull);
       expect(
-        repository.receivedSelection?.paymentType,
+        repository.receivedRequest?.selection.shippingType,
+        ShippingType.standard,
+      );
+      expect(
+        repository.receivedRequest?.selection.paymentType,
         PaymentType.cashOnDelivery,
       );
       expect(container.read(checkoutViewModelProvider).shippingFee, 0);
       expect(container.read(checkoutViewModelProvider).isProcessing, isFalse);
+      expect(container.read(cartViewModelProvider).items, isEmpty);
     },
   );
 }

@@ -6,3 +6,7 @@ import '../domain/repositories/wallet_repository.dart';
 final walletRepositoryProvider = Provider<WalletRepository>((ref) {
   return MockWalletRepository();
 });
+
+final walletClockProvider = Provider<DateTime Function()>(
+  (ref) => DateTime.now,
+);

@@ -140,7 +140,7 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            strings.orderConfirmedThanks(customerName),
+                            '${strings.orderConfirmedThanks(customerName)}\n${strings.demoOrderNotice}',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 13.5,

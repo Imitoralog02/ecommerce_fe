@@ -34,9 +34,9 @@ class PaymentCardEntity {
 class PaymentMethodsState {
   const PaymentMethodsState({
     this.cards = const [],
-    this.momoLinked = true,
-    this.zalopayLinked = true,
-    this.deviceWalletEnabled = true,
+    this.momoLinked = false,
+    this.zalopayLinked = false,
+    this.deviceWalletEnabled = false,
   });
 
   final List<PaymentCardEntity> cards;

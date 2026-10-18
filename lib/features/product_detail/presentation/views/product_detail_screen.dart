@@ -34,6 +34,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
   int _selectedColorIndex = 0;
   String _selectedSize = 'M';
 
+  String get _selectedColorName =>
+      _selectedColorIndex < widget.product.colorNames.length
+      ? widget.product.colorNames[_selectedColorIndex]
+      : 'Black';
+
   late AnimationController _orbitFloatController;
   late AnimationController _orbitResetController;
   late AnimationController _cartBadgeController;
@@ -138,7 +143,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
     final strings = AppLocalizations.of(context);
     ref
         .read(cartViewModelProvider.notifier)
-        .addToCart(widget.product, _selectedSize);
+        .addToCart(widget.product, _selectedSize, _selectedColorName);
 
     // Parabolic Arc Fly To Cart
     FlyToCartHelper.run(
@@ -169,7 +174,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
   void _handleBuyNow() {
     ref
         .read(cartViewModelProvider.notifier)
-        .addToCart(widget.product, _selectedSize);
+        .addToCart(widget.product, _selectedSize, _selectedColorName);
     Navigator.push(
       context,
       AppRouter.page(builder: (_) => const CheckoutScreen()),

@@ -82,7 +82,7 @@ class AuthContent extends ConsumerStatefulWidget {
 
 class _AuthContentState extends ConsumerState<AuthContent> {
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController(text: 'demo@neora.vn');
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -975,7 +975,7 @@ class _AuthContentState extends ConsumerState<AuthContent> {
         _buildFieldLabel(strings.accountOrEmailLabel),
         _buildTextField(
           controller: _emailController,
-          hint: 'demo@neora.vn',
+          hint: 'test@example.com',
           icon: Icons.alternate_email_rounded,
           keyboardType: TextInputType.emailAddress,
         ),

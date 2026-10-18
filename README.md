@@ -2,6 +2,8 @@
 
 NÉORA là ứng dụng thương mại thời trang được xây dựng bằng Flutter. Dự án hiện tập trung vào trải nghiệm giao diện và luồng mua sắm: khám phá sản phẩm, tìm kiếm, giỏ hàng, đặt hàng, theo dõi đơn và quản lý tài khoản. Dữ liệu nghiệp vụ chủ yếu đến từ các repository giả lập trong ứng dụng; dự án chưa kết nối backend hay cổng thanh toán thật.
 
+Tiến độ và các việc cần làm được theo dõi trong [FRONTEND_ROADMAP.md](FRONTEND_ROADMAP.md).
+
 ## Chức năng
 
 | Khu vực | Nội dung |
@@ -48,7 +50,15 @@ Khi sửa nội dung trong `lib/l10n/app_vi.arb` hoặc `lib/l10n/app_en.arb`, c
 
 ## Dữ liệu và giới hạn hiện tại
 
-Các repository `Mock...Repository` cung cấp catalog, giỏ hàng, đơn hàng, tài khoản, thông báo, thanh toán và các luồng khác. Đăng nhập, tìm kiếm bằng ảnh, chat hỗ trợ, kiểm tra kết nối và đặt hàng đang được mô phỏng. Thao tác đặt hàng không gửi giao dịch tới máy chủ hoặc cổng thanh toán. Phần lớn state từ mock repository chỉ tồn tại trong phiên chạy ứng dụng; riêng onboarding và cài đặt được lưu bằng `shared_preferences`.
+Các repository `Mock...Repository` cung cấp catalog, tài khoản, thông báo, thanh toán và các luồng khác. Đăng nhập, tìm kiếm bằng ảnh, chat hỗ trợ, kiểm tra kết nối và đặt hàng đang được mô phỏng. Thao tác đặt hàng không gửi giao dịch tới máy chủ hoặc cổng thanh toán. Onboarding, cài đặt, giỏ hàng, địa chỉ, yêu thích, đơn hàng mẫu và ví voucher/xu được lưu bằng `shared_preferences`; các state mock khác chỉ tồn tại trong phiên chạy ứng dụng. Dữ liệu cục bộ này chưa phải kho lưu trữ an toàn cho thông tin cá nhân hoặc thanh toán thật.
+
+Ví điện tử và thẻ hiển thị dữ liệu mẫu, có thể quản lý trên màn phương thức thanh toán và chọn tại checkout. Ứng dụng chỉ dùng 4 số cuối cho thẻ thêm vào; không nhận số thẻ đầy đủ hoặc CVV. Với catalog tĩnh của bản mock, mỗi biến thể trong giỏ giữ giá từ lần thêm đầu tiên, còn đơn giữ giá tại lúc đặt. Sản phẩm mới được thêm sau khi catalog thay đổi sẽ dùng giá mới; sản phẩm cũ còn trong giỏ vẫn dùng snapshot đã lưu, kể cả khi không còn trong catalog mới.
+
+Voucher trong ví cần được lưu trước khi dùng. Các mã chỉ áp dụng khi đạt đơn tối thiểu, còn hạn và đáp ứng điều kiện hội viên, nhóm sản phẩm hoặc cách giao hàng ghi trên voucher. Một đơn dùng một mã; hoàn xu được cộng sau khi tạo đơn mock, quà tặng được ghi vào chi tiết đơn. Ngày hết hạn mẫu được tạo ở lần mở đầu và lưu cục bộ; sau ngày đó voucher không thể dùng.
+
+Điểm danh thưởng 50 xu một lần theo ngày địa phương của thiết bị. Màn ví tự cập nhật khi qua nửa đêm hoặc khi ứng dụng trở lại, và ngày điểm danh gần nhất được lưu cùng dữ liệu ví.
+
+Flash sale mẫu chạy theo các khung giờ địa phương 09:00–12:00, 12:00–18:00, 18:00–21:00 và 21:00–00:00. Đồng hồ và số suất mẫu được tính theo thời gian, nên mở lại màn hình không đặt lại tiến trình. Giá flash sale hiển thị là giá catalog được đưa vào giỏ; chưa có dịch vụ tồn kho hay thông báo nhắc giờ thực.
 
 Muốn tích hợp backend, triển khai các interface trong `lib/features/<feature>/domain/repositories/` và thay provider tương ứng trong `di/`. Không đưa API key, khóa ký ứng dụng hoặc thông tin môi trường cá nhân vào Git.
 

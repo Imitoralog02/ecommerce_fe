@@ -22,7 +22,7 @@ class ReturnRequestDraft {
     this.solution = ReturnSolution.exchange,
     this.targetSize = 'M',
     this.refundMethod = RefundMethod.wallet,
-    this.evidencePhotos = const ['assets/images/real/lookbook_summer_1.jpg'],
+    this.evidencePhotos = const [],
   });
 
   final String orderId;

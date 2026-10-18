@@ -147,21 +147,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () => cartNotifier.restoreVideoOrder(),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.textMuted,
-                        ),
-                        child: Text(
-                          strings.loadSampleCartAction,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -175,77 +160,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   bottom: 120,
                 ),
                 children: [
-                  // Freeship Progress Bar
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 11,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardSurface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.cardBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.local_shipping_outlined,
-                              size: 16,
-                              color: AppColors.coralOrange,
-                            ),
-                            const SizedBox(width: 7),
-                            Expanded(
-                              child: Text(
-                                cartState.subtotal >= 300000
-                                    ? strings.freeShippingReached
-                                    : strings.freeShippingRemaining(
-                                        (300000 - cartState.subtotal)
-                                            .clamp(0, 300000)
-                                            .toInt(),
-                                      ),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.brandBlack,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: (cartState.subtotal / 300000).clamp(
-                              0.0,
-                              1.0,
-                            ),
-                            minHeight: 5,
-                            backgroundColor: AppColors.softPeach,
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              AppColors.coralOrange,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
                   // 1. List of Cart Items with Dismissible Swipe-to-Delete
                   ...cartState.items.asMap().entries.map((entry) {
                     final index = entry.key;
                     final item = entry.value;
                     return Dismissible(
                       key: ValueKey(
-                        'cart_item_${item.product.id}_${item.selectedSize}_$index',
+                        'cart_item_${item.product.id}_${item.selectedSize}_${item.selectedColor}_$index',
                       ),
                       direction: DismissDirection.endToStart,
                       onDismissed: (_) {
-                        cartNotifier.removeFromCart(item.product.id);
+                        cartNotifier.removeFromCart(
+                          item.product.id,
+                          size: item.selectedSize,
+                          color: item.selectedColor,
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -353,8 +282,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                         ),
                                       ),
                                       GestureDetector(
-                                        onTap: () => cartNotifier
-                                            .removeFromCart(item.product.id),
+                                        onTap: () =>
+                                            cartNotifier.removeFromCart(
+                                              item.product.id,
+                                              size: item.selectedSize,
+                                              color: item.selectedColor,
+                                            ),
                                         child: const Icon(
                                           Icons.close_rounded,
                                           size: 18,
@@ -492,10 +425,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         TextButton(
                           onPressed: () {
                             if (_couponController.text.isNotEmpty) {
-                              cartNotifier.applyCoupon(_couponController.text);
+                              final applied = cartNotifier.applyCoupon(
+                                _couponController.text,
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(strings.couponAppliedMessage),
+                                  content: Text(
+                                    applied
+                                        ? strings.couponAppliedMessage
+                                        : cartNotifier.couponRejection(
+                                                _couponController.text,
+                                              ) ??
+                                              strings.couponRejectedMessage,
+                                  ),
                                   duration: const Duration(seconds: 2),
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -539,10 +481,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         const SizedBox(height: 10),
                         _buildBillRow(
                           strings.shippingFeeLabel,
-                          cartState.shippingFee == 0
-                              ? strings.freeLabel
-                              : '${cartState.shippingFee.toInt()}₫',
-                          valueColor: AppColors.liveGreen,
+                          strings.shippingCalculatedAtCheckoutLabel,
                         ),
                         if (cartState.discount > 0) ...[
                           const SizedBox(height: 10),
@@ -561,7 +500,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                strings.totalPaymentCartLabel,
+                                strings.cartTotalBeforeShippingLabel,
                                 style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,

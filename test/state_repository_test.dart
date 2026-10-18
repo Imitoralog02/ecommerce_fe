@@ -9,6 +9,7 @@ import 'package:ecommerce_fe/features/address/domain/entities/address_entity.dar
 import 'package:ecommerce_fe/features/address/presentation/viewmodels/address_viewmodel.dart';
 import 'package:ecommerce_fe/features/cart/di/cart_providers.dart';
 import 'package:ecommerce_fe/features/cart/presentation/viewmodels/cart_viewmodel.dart';
+import 'package:ecommerce_fe/features/home/data/repositories/mock_product_repository.dart';
 import 'package:ecommerce_fe/features/orders/domain/entities/order_entity.dart';
 import 'package:ecommerce_fe/features/orders/presentation/viewmodels/order_viewmodel.dart';
 import 'package:ecommerce_fe/features/payment_methods/domain/entities/payment_method_entities.dart';
@@ -108,6 +109,12 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
+    final initial = container.read(paymentMethodsViewModelProvider);
+    expect(initial.cards.single.lastFour, '4242');
+    expect(initial.momoLinked, isTrue);
+    expect(initial.zalopayLinked, isTrue);
+    expect(initial.deviceWalletEnabled, isTrue);
+
     container
         .read(paymentMethodsViewModelProvider.notifier)
         .addCard(
@@ -139,6 +146,15 @@ void main() {
     expect(cart.items, isNotEmpty);
     expect(snapshot.items.length, cart.items.length);
     expect(cart.formattedDiscount, endsWith('₫'));
+    expect(
+      identical(
+        snapshot.items.first.product,
+        MockProductRepository.mockCatalog.firstWhere(
+          (product) => product.id == snapshot.items.first.product.id,
+        ),
+      ),
+      isTrue,
+    );
   });
 
   test('address changes are persisted by AddressRepository', () {
