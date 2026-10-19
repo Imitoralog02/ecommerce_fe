@@ -1,5 +1,4 @@
-import 'dart:math' as math;
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -9,534 +8,590 @@ import '../viewmodels/onboarding_viewmodel.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
-
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
-    with SingleTickerProviderStateMixin {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   late final PageController _pageController;
-  late final AnimationController _floatController;
+  String _selectedOccasion = 'Đi làm';
 
-  static const List<Map<String, dynamic>> _onboardingData = [
-    {
-      'title': 'Hàng nghìn mẫu mới\nmỗi ngày cho bạn',
-      'highlight': 'mỗi ngày',
-      'subtitle':
-          'Khám phá thời trang hợp gu, hợp túi tiền — được chọn riêng theo phong cách của bạn.',
-      'image': 'assets/images/real/onb_shopping.jpg',
-      'bgGradient': [Color(0xFFEFE8DE), Color(0xFFF7F4EF)],
-      'badge1': {'icon': '🛍️', 'title': '10.000+', 'sub': 'mẫu mới mỗi tuần'},
-      'badge2': {'icon': '🔥', 'title': '−50%', 'sub': 'hôm nay'},
-    },
-    {
-      'title': 'Mua sắm dễ dàng\nchỉ với vài chạm',
-      'highlight': 'dễ dàng',
-      'subtitle':
-          'Xem ảnh thật, đánh giá thật từ người mua. Lưu món yêu thích và thanh toán chỉ trong 30 giây.',
-      'image': 'assets/images/real/onb_browsing.jpg',
-      'bgGradient': [Color(0xFFF2ECE1), Color(0xFFF7F4EF)],
-      'badge1': {'icon': '⭐', 'title': '4.9 / 5', 'sub': '2.000+ đánh giá'},
-      'badge2': {
-        'icon': '💖',
-        'title': 'Yêu thích',
-        'sub': 'lưu nhanh tiện lợi',
-      },
-    },
-    {
-      'title': 'Giao nhanh 2 giờ,\nđổi trả miễn phí',
-      'highlight': '2 giờ',
-      'subtitle':
-          'Nhận hàng ngay trong ngày tại nội thành. Không vừa ý? Đổi trả miễn phí trong 30 ngày.',
-      'image': 'assets/images/real/onb_delivery.jpg',
-      'bgGradient': [Color(0xFFE8EFE8), Color(0xFFF7F4EF)],
-      'badge1': {'icon': '🚚', 'title': 'Giao 2h', 'sub': 'nội thành'},
-      'badge2': {'icon': '✅', 'title': '30 ngày', 'sub': 'đổi trả miễn phí'},
-    },
+  static const _pages = [
+    (
+      title: 'Ít hơn,\nđúng chất bạn.',
+      subtitle:
+          'Chào mừng đến NÉORA. Cùng tìm cảm hứng mặc đẹp, tự nhiên trong từng ngày.',
+      image: 'assets/images/real/splash_1_couple.jpg',
+      label: 'PHONG CÁCH BẮT ĐẦU TỪ BẠN',
+    ),
+    (
+      title: 'Đúng dịp, đúng gu.\nVừa ngân sách.',
+      subtitle:
+          'Bạn chọn hoàn cảnh và mức chi. NÉORA gợi ý cả bộ, để bạn tự tin là chính mình.',
+      image: 'assets/images/real/splash_2_work.jpg',
+      label: 'STYLIST CỦA RIÊNG BẠN',
+    ),
+    (
+      title: 'Tủ đồ có gu.\nChọn theo cách bạn.',
+      subtitle:
+          'Thời trang nam, nữ và phụ kiện có chọn lọc. Tìm món bạn yêu, mua sắm cùng NÉORA.',
+      image: 'assets/images/real/splash_3_women.jpg',
+      label: 'KHÁM PHÁ & MUA SẮM',
+    ),
   ];
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
-    _floatController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2400),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _floatController
-        ..stop()
-        ..value = 0.5;
-    } else if (!_floatController.isAnimating) {
-      _floatController.repeat(reverse: true);
-    }
+    final initialPage = ref.read(onboardingViewModelProvider);
+    _pageController = PageController(initialPage: initialPage);
   }
 
   @override
   void dispose() {
-    _floatController.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
-  Future<void> _skipToHome() async {
+  Future<void> _skipToHome({int tabIndex = 0}) async {
     await ref.read(onboardingRepositoryProvider).markOnboardingSeen();
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, AppRoutes.main, arguments: 0);
+    Navigator.pushReplacementNamed(context, AppRoutes.main, arguments: tabIndex);
   }
 
-  void _nextPage(int currentPage) {
-    if (currentPage < _onboardingData.length - 1) {
+  Future<void> _startWithNeora() async {
+    await ref.read(onboardingRepositoryProvider).markOnboardingSeen();
+    if (!mounted) return;
+    Navigator.push(context, AppRouter.page(builder: (_) => const AuthScreen()));
+  }
+
+  void _nextPage(int page) {
+    if (page < _pages.length - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
       );
     } else {
-      _skipToHome();
+      _startWithNeora();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final currentPage = ref.watch(onboardingViewModelProvider);
-    final currentItem = _onboardingData[currentPage];
-
     return Scaffold(
-      backgroundColor: AppColors.warmBackground,
-      body: AnimatedContainer(
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: const [0.0, 0.65],
-            colors: currentItem['bgGradient'] as List<Color>,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // 1. Top Header: Bước & Nút Bỏ qua
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top Header: NÉORA | Bỏ qua (Screens 1-2) or MẶC ĐẸP MỖI NGÀY (Screen 3)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 10),
+              child: Row(
+                children: [
+                  const Text('NÉORA', style: AppTypography.splashLogo),
+                  const Spacer(),
+                  if (currentPage == 2)
+                    const Text(
+                      'MẶC ĐẸP MỖI NGÀY',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppTypography.sansFont,
+                        fontSize: 9.5,
+                        letterSpacing: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        '${currentPage + 1} / ${_onboardingData.length}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.friendlySubText,
-                        ),
-                      ),
-                    ),
+                    )
+                  else
                     TextButton(
-                      onPressed: _skipToHome,
+                      onPressed: _startWithNeora,
                       style: TextButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.85),
-                        foregroundColor: AppColors.friendlyText,
+                        foregroundColor: AppColors.textSecondary,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                          horizontal: 6,
+                          vertical: 4,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: const Text(
                         'Bỏ qua',
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                          fontFamily: AppTypography.sansFont,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
+            ),
 
-              // 2. 3D Card Stack với ảnh thật
-              Expanded(
-                flex: 11,
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: _onboardingData.length,
-                  onPageChanged: ref
-                      .read(onboardingViewModelProvider.notifier)
-                      .selectPage,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemBuilder: (context, index) {
-                    final item = _onboardingData[index];
-                    return AnimatedBuilder(
-                      animation: Listenable.merge([
-                        _pageController,
-                        _floatController,
-                      ]),
-                      builder: (context, child) {
-                        double pageOffset = 0.0;
-                        if (_pageController.position.haveDimensions) {
-                          pageOffset = (_pageController.page ?? 0) - index;
-                        }
-
-                        // Hiệu ứng 3D perspective rotation và scale
-                        final gauss = math.exp(-math.pow(pageOffset * 1.5, 2));
-                        final angle = pageOffset * 0.25;
-
-                        // Hiệu ứng nhấp nhô lơ lửng 3D liên tục (Continuous Idle Floating)
-                        final floatProgress = _floatController.value;
-                        final floatY1 =
-                            math.sin(floatProgress * math.pi * 2) * 7.5;
-                        final floatY2 =
-                            -math.sin(floatProgress * math.pi * 2) * 7.0;
-                        final floatRot1 =
-                            math.sin(floatProgress * math.pi * 2) * 0.035;
-                        final floatRot2 =
-                            -math.cos(floatProgress * math.pi * 2) * 0.035;
-
-                        return Transform(
-                          transform: Matrix4.identity()
-                            ..setEntry(3, 2, 0.001)
-                            ..rotateY(-angle)
-                            ..rotateZ(angle * 0.3)
-                            ..scaleByDouble(
-                              0.92 + 0.08 * gauss,
-                              0.92 + 0.08 * gauss,
-                              1.0,
-                              1.0,
+            // 3 Splash / Onboarding Slides
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: _pages.length,
+                onPageChanged: ref
+                    .read(onboardingViewModelProvider.notifier)
+                    .selectPage,
+                itemBuilder: (context, index) {
+                  final page = _pages[index];
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      final visualHeight = (constraints.maxHeight * 0.58).clamp(
+                        180.0,
+                        390.0,
+                      );
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              height: visualHeight,
+                              width: double.infinity,
+                              child: _buildPageVisual(index, page.image),
                             ),
-                          alignment: Alignment.center,
-                          child: Center(
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                // Thẻ ảnh chính bo tròn viền trắng sang trọng
-                                Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.76,
-                                  height:
-                                      MediaQuery.of(context).size.height * 0.44,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(36),
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 6,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF14120E,
-                                        ).withValues(alpha: 0.12),
-                                        blurRadius: 36,
-                                        offset: const Offset(0, 20),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(30),
-                                    child: Image.asset(
-                                      item['image'] as String,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
-                                                color: AppColors.softPeach,
-                                                child: const Icon(
-                                                  Icons.image_outlined,
-                                                  size: 60,
-                                                  color: AppColors.coralOrange,
-                                                ),
-                                              ),
-                                    ),
-                                  ),
-                                ),
-
-                                // 3D Floating Sticker 1 (Bay lơ lửng liên tục)
-                                Positioned(
-                                  top: 24,
-                                  left: -20,
-                                  child: Transform(
-                                    transform: Matrix4.identity()
-                                      ..translateByDouble(
-                                        pageOffset * 20,
-                                        floatY1,
-                                        0.0,
-                                        1.0,
-                                      )
-                                      ..rotateZ(floatRot1),
-                                    child: _buildStickerBadge(
-                                      icon: item['badge1']['icon']!,
-                                      title: item['badge1']['title']!,
-                                      sub: item['badge1']['sub']!,
-                                    ),
-                                  ),
-                                ),
-
-                                // 3D Floating Sticker 2 (Bay lơ lửng liên tục)
-                                Positioned(
-                                  bottom: 24,
-                                  right: -16,
-                                  child: Transform(
-                                    transform: Matrix4.identity()
-                                      ..translateByDouble(
-                                        -pageOffset * 24,
-                                        floatY2,
-                                        0.0,
-                                        1.0,
-                                      )
-                                      ..rotateZ(floatRot2),
-                                    child: _buildStickerBadge(
-                                      icon: item['badge2']['icon']!,
-                                      title: item['badge2']['title']!,
-                                      sub: item['badge2']['sub']!,
-                                      isAccent: index == 0,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 22),
+                            Text(
+                              page.label,
+                              style: AppTypography.architecturalCode.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 10,
+                                letterSpacing: 1.4,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
+                            const SizedBox(height: 8),
+                            Text(
+                              page.title,
+                              style: AppTypography.splashHeadline.copyWith(
+                                fontSize: 28,
+                                height: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              page.subtitle,
+                              style: AppTypography.body.copyWith(
+                                fontSize: 13,
+                                height: 1.55,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+
+            // Bottom Progress & CTA Button
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      ...List.generate(
+                        _pages.length,
+                        (index) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          width: index == currentPage ? 22 : 8,
+                          height: 3,
+                          margin: const EdgeInsets.only(right: 6),
+                          decoration: BoxDecoration(
+                            color: index == currentPage
+                                ? AppColors.primary
+                                : AppColors.divider,
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                        );
-                      },
-                    );
-                  },
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '0${currentPage + 1} / 03',
+                        style: AppTypography.bodySmall.copyWith(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => _nextPage(currentPage),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: Text(
+                        currentPage == 2
+                            ? 'Bắt đầu cùng NÉORA  →'
+                            : 'Tiếp tục  →',
+                        style: const TextStyle(
+                          fontFamily: AppTypography.sansFont,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPageVisual(int index, String imagePath) {
+    // Splash Screen 1 (01 / 03): Chào đón · NÉORA
+    if (index == 0) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(imagePath, fit: BoxFit.cover),
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.background.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'CHÀO BẠN, NÉORA ĐÂY.',
+                  style: TextStyle(
+                    fontFamily: AppTypography.sansFont,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
+            ),
+          ],
+        ),
+      );
+    }
 
-              // 3. Bottom White Sheet: Tiêu đề tiếng Việt, Indicator & Nút bấm
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 28,
-                      offset: Offset(0, -10),
-                    ),
-                  ],
+    // Splash Screen 2 (02 / 03): Phối đồ mỗi ngày · NÉORA
+    if (index == 1) {
+      final occasionImage = switch (_selectedOccasion) {
+        'Đi chơi' => 'assets/images/real/p_knit.jpg',
+        'Dự tiệc' => 'assets/images/real/p_dress.jpg',
+        _ => imagePath,
+      };
+      final occasionPrice = switch (_selectedOccasion) {
+        'Đi chơi' => '1.470.000 ₫',
+        'Dự tiệc' => '1.680.000 ₫',
+        _ => '1.770.000 ₫',
+      };
+
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(occasionImage, fit: BoxFit.cover),
+            Positioned(
+              top: 12,
+              left: 12,
+              right: 12,
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _buildOccasionChip(
+                    'Đi làm',
+                    active: _selectedOccasion == 'Đi làm',
+                  ),
+                  _buildOccasionChip(
+                    'Đi chơi',
+                    active: _selectedOccasion == 'Đi chơi',
+                  ),
+                  _buildOccasionChip(
+                    'Dự tiệc',
+                    active: _selectedOccasion == 'Dự tiệc',
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.background.withValues(alpha: 0.96),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.cardBorder),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Tiêu đề nổi bật
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 350),
-                      child: Text(
-                        currentItem['title'] as String,
-                        key: ValueKey<int>(currentPage),
-                        style: const TextStyle(
-                          fontFamily: AppTypography.sansFont,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          height: 1.25,
-                          color: AppColors.friendlyText,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Phụ đề mô tả thân thiện
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 350),
-                      child: Text(
-                        currentItem['subtitle'] as String,
-                        key: ValueKey<int>(currentPage),
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          height: 1.55,
-                          color: AppColors.friendlySubText,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-
-                    // Dots Indicator & Nút hành động
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Dots
-                        Row(
-                          children: List.generate(
-                            _onboardingData.length,
-                            (idx) => AnimatedContainer(
-                              duration: const Duration(milliseconds: 350),
-                              margin: const EdgeInsets.only(right: 6),
-                              width: currentPage == idx ? 28 : 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: currentPage == idx
-                                    ? AppColors.coralOrange
-                                    : AppColors.cardBorder,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
+                        Text(
+                          'Ngân sách cả bộ',
+                          style: TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
                           ),
                         ),
-
-                        // Nút "Tiếp tục" / "Bắt đầu mua sắm"
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: 54,
-                          child: ElevatedButton(
-                            onPressed: () => _nextPage(currentPage),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.coralOrange,
-                              foregroundColor: Colors.white,
-                              elevation: 8,
-                              shadowColor: AppColors.coralOrange.withValues(
-                                alpha: 0.4,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  currentPage == _onboardingData.length - 1
-                                      ? 'Bắt đầu mua sắm'
-                                      : 'Tiếp tục',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 18,
-                                ),
-                              ],
-                            ),
+                        Text(
+                          '1.800.000 ₫',
+                          style: TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ],
                     ),
-                    if (currentPage == _onboardingData.length - 1) ...[
-                      const SizedBox(height: 12),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            AppRouter.page(builder: (_) => const AuthScreen()),
-                          );
-                        },
-                        child: Center(
-                          child: Text.rich(
-                            TextSpan(
-                              text: 'Đã có tài khoản? ',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.friendlySubText,
-                              ),
-                              children: const [
-                                TextSpan(
-                                  text: 'Đăng nhập',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.brandBlack,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ],
-                            ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 6),
+                      child: Divider(height: 1, color: AppColors.divider),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '3 món · NÉORA chọn cho bạn',
+                          style: TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
                           ),
                         ),
-                      ),
-                    ],
+                        Text(
+                          occasionPrice,
+                          style: const TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Splash Screen 3 (03 / 03): Khám phá phong cách · NÉORA
+    return Column(
+      children: [
+        Expanded(
+          flex: 6,
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildCategoryCard(
+                  'assets/images/real/splash_3_women.jpg',
+                  'Nữ ↗',
+                  onTap: () => _skipToHome(tabIndex: 1),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildCategoryCard(
+                  'assets/images/real/splash_3_men.jpg',
+                  'Nam ↗',
+                  alignment: const Alignment(0, -0.5),
+                  onTap: () => _skipToHome(tabIndex: 1),
+                ),
+              ),
             ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Expanded(
+          flex: 3,
+          child: GestureDetector(
+            onTap: () => _skipToHome(tabIndex: 1),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.studioGray,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: AspectRatio(
+                      aspectRatio: 1.25,
+                      child: Image.asset(
+                        'assets/images/real/splash_3_acc.jpg',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'ĐIỂM NHẤN VỪA ĐỦ',
+                          style: TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.0,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text.rich(
+                          TextSpan(
+                            text: 'Phụ kiện ',
+                            style: TextStyle(
+                              fontFamily: AppTypography.bookSerifFont,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: '↗',
+                                style: TextStyle(
+                                  fontFamily: AppTypography.sansFont,
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Túi, giày & trang sức',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOccasionChip(String text, {required bool active}) {
+    return GestureDetector(
+      onTap: () => setState(() => _selectedOccasion = text),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.primary
+              : AppColors.background.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontFamily: AppTypography.sansFont,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: active ? Colors.white : AppColors.textPrimary,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildStickerBadge({
-    required String icon,
-    required String title,
-    required String sub,
-    bool isAccent = false,
+  Widget _buildCategoryCard(
+    String image,
+    String label, {
+    Alignment alignment = Alignment.center,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: isAccent ? AppColors.coralOrange : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: isAccent ? Colors.white : AppColors.friendlyText,
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(image, fit: BoxFit.cover, alignment: alignment),
+            Positioned(
+              left: 10,
+              bottom: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.background.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontFamily: AppTypography.sansFont,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
-              Text(
-                sub,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: isAccent ? Colors.white70 : AppColors.friendlySubText,
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+

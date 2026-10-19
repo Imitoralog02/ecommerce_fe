@@ -15,7 +15,7 @@ void main() {
 
     // Initial frame displays the current Vietnamese NÉORA onboarding.
     expect(find.text('Bỏ qua'), findsOneWidget);
-    expect(find.text('1 / 3'), findsOneWidget);
+    expect(find.text('01 / 03'), findsOneWidget);
   });
 
   testWidgets('NeoraApp skips onboarding after it has been completed', (

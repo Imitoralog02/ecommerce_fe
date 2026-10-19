@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/product_visual_widget.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
 import '../../../cart/presentation/views/cart_screen.dart';
 import '../../../home/domain/entities/product_entity.dart';
@@ -16,7 +16,8 @@ class LookbookHotspot {
   final double price;
   final double originalPrice;
   final String imageType;
-  final Offset position; // Normalized 0.0 to 1.0
+  final String imagePath;
+  final Offset position;
   final ProductEntity? product;
 
   const LookbookHotspot({
@@ -25,6 +26,7 @@ class LookbookHotspot {
     required this.price,
     required this.originalPrice,
     required this.imageType,
+    required this.imagePath,
     required this.position,
     this.product,
   });
@@ -32,6 +34,9 @@ class LookbookHotspot {
 
 class LookbookThemeModel {
   final String id;
+  final String badge;
+  final String occasion;
+  final String gender;
   final String title;
   final String subtitle;
   final String imagePath;
@@ -40,6 +45,9 @@ class LookbookThemeModel {
 
   const LookbookThemeModel({
     required this.id,
+    required this.badge,
+    required this.occasion,
+    required this.gender,
     required this.title,
     required this.subtitle,
     required this.imagePath,
@@ -50,240 +58,240 @@ class LookbookThemeModel {
   double get totalPrice => items.fold(0, (sum, i) => sum + i.price);
   double get totalOriginalPrice =>
       items.fold(0, (sum, i) => sum + i.originalPrice);
-  double get bundlePrice => totalPrice * 0.85; // 15% bundle discount
+  double get bundlePrice => totalPrice;
   double get savings => totalOriginalPrice - bundlePrice;
 }
 
 class LookbookScreen extends ConsumerStatefulWidget {
-  const LookbookScreen({super.key});
+  final bool initialShowDetail;
+
+  const LookbookScreen({super.key, this.initialShowDetail = false});
 
   @override
   ConsumerState<LookbookScreen> createState() => _LookbookScreenState();
 }
 
-class _LookbookScreenState extends ConsumerState<LookbookScreen>
-    with SingleTickerProviderStateMixin {
-  late PageController _pageController;
-  int _currentLookIndex = 0;
-  int? _selectedHotspotIndex;
+class _LookbookScreenState extends ConsumerState<LookbookScreen> {
+  String _selectedOccasion = 'Đi làm';
+  String _selectedGender = 'Tất cả';
+  double _budget = 1800000;
+  bool _showOutfitDetail = false;
+  int _selectedOutfitIndex = 0;
+  final Set<int> _checkedItems = {0, 1, 2};
+  int _selectedAltBagIndex = -1; // -1 = default cognac bag, 0 = black bag, 1 = cream tote
 
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
+  static const _occasions = [
+    (label: 'Đi làm', icon: Icons.work_outline_rounded),
+    (label: 'Đi chơi', icon: Icons.local_cafe_outlined),
+    (label: 'Dự tiệc', icon: Icons.wine_bar_outlined),
+    (label: 'Du lịch', icon: Icons.luggage_outlined),
+  ];
+
+  static const _genders = ['Tất cả', 'Nữ', 'Nam'];
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-
-    _pulseAnimation = Tween<double>(begin: 0.9, end: 1.25).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+    _showOutfitDetail = widget.initialShowDetail;
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _pulseController
-        ..stop()
-        ..value = 0.5;
-    } else if (!_pulseController.isAnimating) {
-      _pulseController.repeat(reverse: true);
-    }
+  Alignment _imageAlignment(String path) {
+    if (path.contains('banner_men.jpg')) return const Alignment(0.58, -0.1);
+    if (path.contains('p_knit.jpg')) return const Alignment(0.0, -0.35);
+    return Alignment.center;
   }
 
   String _formatVnd(double price) {
-    final intPrice = price.toInt();
+    final intPrice = price.round();
     final s = intPrice.toString();
     final buffer = StringBuffer();
     for (int i = 0; i < s.length; i++) {
       if (i > 0 && (s.length - i) % 3 == 0) buffer.write('.');
       buffer.write(s[i]);
     }
-    return '${buffer.toString()}₫';
+    return '${buffer.toString()} ₫';
   }
 
-  List<LookbookThemeModel> _getThemes(List<ProductEntity> catalog) {
-    ProductEntity findProd(String type) {
+  List<LookbookThemeModel> _getOutfits(List<ProductEntity> catalog) {
+    ProductEntity findProd(String type, {double fallbackPrice = 590000}) {
       return catalog.firstWhere(
         (p) => p.imageType == type || p.category.toLowerCase().contains(type),
         orElse: () => catalog.isNotEmpty
             ? catalog.first
-            : const ProductEntity(
-                id: 'default',
+              : ProductEntity(
+                id: 'default_$type',
                 pieceNumber: '01',
                 title: 'Trang phục NÉORA',
                 subCategory: 'THỜI TRANG',
-                category: 'Đầm',
-                price: 490000,
-                composition: 'Chất liệu cao cấp',
-                description: 'Thiết kế độc quyền',
-                availableSizes: ['S', 'M', 'L'],
-                imageType: 'dress',
+                category: 'Sơ mi',
+                price: fallbackPrice,
+                composition: '100% Cotton tự nhiên',
+                description: 'Thiết kế tối giản cho nhịp sống mỗi ngày.',
+                availableSizes: const ['S', 'M', 'L'],
+                imageType: type,
               ),
       );
     }
 
-    final dressProd = findProd('dress');
-    final knitProd = findProd('knit_sweater');
-    final hoodieProd = findProd('hoodie');
-    final shirtProd = findProd('shirt');
-    final bagProd = findProd('bag');
-    final sneakerProd = findProd('sneaker');
+    final shirtProd = findProd('shirt', fallbackPrice: 590000);
+    final jeansProd = findProd('jeans', fallbackPrice: 690000);
+    final bagProd = findProd('bag', fallbackPrice: 490000);
+    final sneakerProd = findProd('sneaker', fallbackPrice: 650000);
+
+    final bagTitle = _selectedAltBagIndex == 0
+        ? 'Túi vai da - Đen'
+        : _selectedAltBagIndex == 1
+        ? 'Túi tote vải - Kem'
+        : 'Túi vai da mềm';
+    final bagPrice = _selectedAltBagIndex == 1 ? 290000.0 : 490000.0;
+    const bagImage = 'assets/images/real/p_bag.jpg';
 
     return [
       LookbookThemeModel(
-        id: 'look-1',
-        title: 'Dạo Phố Cuối Tuần Parisian',
-        subtitle: 'Thanh lịch chuẩn phong cách Pháp cổ điển',
-        imagePath: 'assets/images/real/onb_shopping.jpg',
+        id: 'outfit-female-work',
+        badge: 'NÉORA CHỌN CHO BẠN',
+        occasion: 'Đi làm',
+        gender: 'Nữ',
+        title: 'Đi làm, thật nhẹ nhàng',
+        subtitle: 'Nữ • 3 món • Trắng ngà, xám than & nâu',
+        imagePath: 'assets/images/real/p_knit.jpg',
         inspiration:
-            'Sự kết hợp giữa chất liệu len dệt kim mềm mịn và áo thun basic mang lại sự thoải mái tuyệt đối cho những buổi trà chiều.',
+            'Sơ vin nhẹ và xắn tay áo một nếp để tổng thể tự nhiên hơn.',
         items: [
           LookbookHotspot(
-            title: 'Áo len cổ lọ dệt kim mềm mịn',
-            category: 'Áo len · Tone Yến Mạch',
-            price: 389000,
-            originalPrice: 520000,
-            imageType: 'knit_sweater',
-            position: const Offset(0.50, 0.40),
-            product: knitProd,
-          ),
-          LookbookHotspot(
-            title: 'Túi đeo vai da khoá vàng sang trọng',
-            category: 'Phụ kiện · Da bê Nâu Bò',
+            title: 'Sơ mi cotton dáng rộng',
+            category: 'Cỡ M • Trắng ngà',
             price: 590000,
-            originalPrice: 790000,
-            imageType: 'bag',
-            position: const Offset(0.68, 0.55),
-            product: bagProd,
-          ),
-          LookbookHotspot(
-            title: 'Giày sneaker da trắng basic',
-            category: 'Giày · Da thật 100%',
-            price: 690000,
-            originalPrice: 890000,
-            imageType: 'sneaker',
-            position: const Offset(0.50, 0.88),
-            product: sneakerProd,
-          ),
-        ],
-      ),
-      LookbookThemeModel(
-        id: 'look-2',
-        title: 'Thơ Mộng Mùa Hạ Floral Muse',
-        subtitle: 'Bay bổng, dịu dàng giữa vườn hoa sớm',
-        imagePath: 'assets/images/real/banner_summer.jpg',
-        inspiration:
-            'Chiếc đầm hoa wrap nhẹ nhàng ôm lấy đường cong cơ thể, kết hợp cùng túi xách da tạo nên vẻ đẹp thuần khiết.',
-        items: [
-          LookbookHotspot(
-            title: 'Đầm hoa wrap dáng midi nữ tính',
-            category: 'Đầm · Voan tơ Kem Be',
-            price: 459000,
-            originalPrice: 659000,
-            imageType: 'dress',
-            position: const Offset(0.52, 0.48),
-            product: dressProd,
-          ),
-          LookbookHotspot(
-            title: 'Túi đeo vai da khoá vàng sang trọng',
-            category: 'Phụ kiện · Da bê Nâu Bò',
-            price: 590000,
-            originalPrice: 790000,
-            imageType: 'bag',
-            position: const Offset(0.70, 0.60),
-            product: bagProd,
-          ),
-        ],
-      ),
-      LookbookThemeModel(
-        id: 'look-3',
-        title: 'Năng Động Đường Phố Athleisure',
-        subtitle: 'Trẻ trung, hiện đại và tràn đầy năng lượng',
-        imagePath: 'assets/images/real/onb_browsing.jpg',
-        inspiration:
-            'Tone màu tím lavender ngọt ngào hòa quyện cùng form dáng oversize thoải mái cho mọi hoạt động năng động hàng ngày.',
-        items: [
-          LookbookHotspot(
-            title: 'Áo hoodie oversize màu lavender',
-            category: 'Hoodie · Nỉ bông cotton',
-            price: 329000,
-            originalPrice: 480000,
-            imageType: 'hoodie',
-            position: const Offset(0.50, 0.42),
-            product: hoodieProd,
-          ),
-          LookbookHotspot(
-            title: 'Áo sơ mi lụa tơ tằm cổ điển',
-            category: 'Sơ mi · Lụa cao cấp',
-            price: 420000,
-            originalPrice: 550000,
+            originalPrice: 690000,
             imageType: 'shirt',
-            position: const Offset(0.48, 0.65),
-            product: shirtProd,
+            imagePath: 'assets/images/real/p_shirt.jpg',
+            position: const Offset(0.5, 0.35),
+            product: shirtProd.copyWith(
+              title: 'Sơ mi cotton dáng rộng',
+              price: 590000,
+              imagePath: 'assets/images/real/p_shirt.jpg',
+            ),
           ),
           LookbookHotspot(
-            title: 'Giày sneaker da trắng basic',
-            category: 'Giày · Da thật 100%',
+            title: 'Quần âu ống suông',
+            category: 'Cỡ M • Xám than',
             price: 690000,
-            originalPrice: 890000,
+            originalPrice: 790000,
+            imageType: 'jeans',
+            imagePath: 'assets/images/real/p_jeans.jpg',
+            position: const Offset(0.5, 0.65),
+            product: jeansProd.copyWith(
+              title: 'Quần âu ống suông',
+              price: 690000,
+              imagePath: 'assets/images/real/p_jeans.jpg',
+            ),
+          ),
+          LookbookHotspot(
+            title: bagTitle,
+            category: _selectedAltBagIndex == 1
+                ? 'Một cỡ • Kem tự nhiên'
+                : _selectedAltBagIndex == 0
+                ? 'Một cỡ • Đen'
+                : 'Một cỡ • Nâu da bò',
+            price: bagPrice,
+            originalPrice: 590000,
+            imageType: 'bag',
+            imagePath: bagImage,
+            position: const Offset(0.68, 0.55),
+            product: bagProd.copyWith(
+              title: bagTitle,
+              price: bagPrice,
+              imagePath: bagImage,
+            ),
+          ),
+        ],
+      ),
+      LookbookThemeModel(
+        id: 'outfit-male-work',
+        badge: 'DÀNH CHO NAM',
+        occasion: 'Đi làm',
+        gender: 'Nam',
+        title: 'Gọn gàng, không gò bó',
+        subtitle: '3 món • Áo polo, quần khaki & giày da',
+        imagePath: 'assets/images/real/banner_men.jpg',
+        inspiration:
+            'Phom dáng vừa vặn cùng chất liệu thoáng khí giúp bạn thoải mái suốt ngày dài.',
+        items: [
+          LookbookHotspot(
+            title: 'Áo khoác linen mỏng',
+            category: 'Cỡ L • Xanh rêu',
+            price: 540000,
+            originalPrice: 650000,
+            imageType: 'shirt',
+            imagePath: 'assets/images/real/p_shirt.jpg',
+            position: const Offset(0.5, 0.35),
+            product: shirtProd.copyWith(
+              title: 'Áo khoác linen mỏng',
+              price: 540000,
+              imagePath: 'assets/images/real/p_shirt.jpg',
+            ),
+          ),
+          LookbookHotspot(
+            title: 'Quần linen ống đứng',
+            category: 'Cỡ L • Be cát',
+            price: 540000,
+            originalPrice: 650000,
+            imageType: 'jeans',
+            imagePath: 'assets/images/real/p_jeans.jpg',
+            position: const Offset(0.5, 0.65),
+            product: jeansProd.copyWith(
+              title: 'Quần linen ống đứng',
+              price: 540000,
+              imagePath: 'assets/images/real/p_jeans.jpg',
+            ),
+          ),
+          LookbookHotspot(
+            title: 'Giày da tối giản',
+            category: 'Cỡ 41 • Trắng kem',
+            price: 650000,
+            originalPrice: 790000,
             imageType: 'sneaker',
-            position: const Offset(0.50, 0.88),
-            product: sneakerProd,
+            imagePath: 'assets/images/real/p_sneaker.jpg',
+            position: const Offset(0.5, 0.88),
+            product: sneakerProd.copyWith(
+              title: 'Giày da tối giản',
+              price: 650000,
+              imagePath: 'assets/images/real/p_sneaker.jpg',
+            ),
           ),
         ],
       ),
     ];
   }
 
-  void _addBundleToCart(LookbookThemeModel look) {
+  void _addSelectedToCart(LookbookThemeModel outfit) {
     final notifier = ref.read(cartViewModelProvider.notifier);
-    for (var item in look.items) {
-      if (item.product != null) {
-        notifier.addToCart(item.product!, 'M');
+    int addedCount = 0;
+    for (int i = 0; i < outfit.items.length; i++) {
+      if (_checkedItems.contains(i)) {
+        final item = outfit.items[i];
+        if (item.product != null) {
+          notifier.addToCart(item.product!, 'M', item.category);
+          addedCount++;
+        }
       }
     }
+    if (addedCount == 0) return;
 
     HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_rounded,
-              color: AppColors.camelGold,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Đã thêm trọn bộ ${look.items.length} món (${look.title}) vào giỏ hàng! 🛍️',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
+        content: Text(
+          'Đã thêm $addedCount món từ "${outfit.title}" vào giỏ hàng',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         ),
-        backgroundColor: AppColors.brandBlack,
+        backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         action: SnackBarAction(
           label: 'XEM GIỎ',
-          textColor: AppColors.coralOrange,
+          textColor: Colors.white,
           onPressed: () {
             Navigator.push(
               context,
@@ -298,649 +306,1102 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen>
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
-    final themes = _getThemes(homeState.allProducts);
-    final currentLook = themes[_currentLookIndex];
+    final outfits = _getOutfits(homeState.allProducts);
+    final selectedOutfit = outfits[_selectedOutfitIndex.clamp(0, outfits.length - 1)];
+
+    if (_showOutfitDetail) {
+      return _buildOutfitDetailScreen(selectedOutfit);
+    }
+    return _buildStylistOverviewScreen(outfits);
+  }
+
+  // ===========================================================================
+  // SCREEN 8: Stylist gợi ý outfit - NẾP
+  // ===========================================================================
+  Widget _buildStylistOverviewScreen(List<LookbookThemeModel> outfits) {
+    final cartCount = ref.watch(cartViewModelProvider).totalItemCount;
+    final primaryOutfit = outfits.first;
+    final secondaryOutfit = outfits.length > 1 ? outfits[1] : outfits.first;
+    final diffFromBudget = (_budget - primaryOutfit.totalPrice).clamp(0.0, double.infinity);
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // 1. Scrollable Content
-          CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              // Top Editorial Look Image with Hotspots
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 480,
-                  child: Stack(
-                    children: [
-                      // PageView of Looks
-                      PageView.builder(
-                        controller: _pageController,
-                        itemCount: themes.length,
-                        onPageChanged: (idx) {
-                          setState(() {
-                            _currentLookIndex = idx;
-                            _selectedHotspotIndex = null;
-                          });
-                        },
-                        itemBuilder: (context, index) {
-                          final look = themes[index];
-                          return Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Image.asset(
-                                look.imagePath,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => Container(
-                                  color: const Color(0xFF262220),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.style_outlined,
-                                      color: Colors.white,
-                                      size: 60,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // Bottom gradient vignette
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.black.withValues(alpha: 0.5),
-                                      Colors.transparent,
-                                      Colors.black.withValues(alpha: 0.75),
-                                    ],
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    stops: const [0.0, 0.4, 1.0],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-
-                      // Interactive Hotspot Pins over Current Look
-                      ...List.generate(currentLook.items.length, (idx) {
-                        final item = currentLook.items[idx];
-                        final isSelected = _selectedHotspotIndex == idx;
-
-                        return Positioned(
-                          left:
-                              item.position.dx *
-                                  MediaQuery.of(context).size.width -
-                              20,
-                          top: item.position.dy * 460 - 20,
-                          child: GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() {
-                                _selectedHotspotIndex = isSelected ? null : idx;
-                              });
-                            },
-                            child: AnimatedBuilder(
-                              animation: _pulseAnimation,
-                              builder: (context, child) {
-                                return Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    // Outer pulsing ripple
-                                    Container(
-                                      width:
-                                          40 *
-                                          (isSelected
-                                              ? 1.3
-                                              : _pulseAnimation.value),
-                                      height:
-                                          40 *
-                                          (isSelected
-                                              ? 1.3
-                                              : _pulseAnimation.value),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: AppColors.coralOrange.withValues(
-                                          alpha: isSelected ? 0.45 : 0.25,
-                                        ),
-                                      ),
-                                    ),
-                                    // Inner white pin dot
-                                    Container(
-                                      width: 22,
-                                      height: 22,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: isSelected
-                                            ? AppColors.coralOrange
-                                            : Colors.white,
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2.5,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.3,
-                                            ),
-                                            blurRadius: 6,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: isSelected
-                                          ? const Icon(
-                                              Icons.check,
-                                              size: 12,
-                                              color: Colors.white,
-                                            )
-                                          : null,
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      }),
-
-                      // Look Title Banner overlay on image
-                      Positioned(
-                        bottom: 24,
-                        left: 20,
-                        right: 20,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.camelGold,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'LOOK 0${_currentLookIndex + 1} / 0${themes.length}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              currentLook.title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              currentLook.subtitle,
-                              style: const TextStyle(
-                                color: Color(0xFFF0EBE5),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            size: 20,
+            color: AppColors.textPrimary,
+          ),
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        centerTitle: true,
+        title: const Text(
+          'Stylist mỗi ngày',
+          style: TextStyle(
+            fontFamily: AppTypography.serifFont,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 20,
+                  color: AppColors.textPrimary,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    AppRouter.page(builder: (_) => const CartScreen()),
+                  );
+                },
+              ),
+              if (cartCount > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$cartCount',
+                        style: const TextStyle(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
                         ),
                       ),
-
-                      // Indicators dot
-                      Positioned(
-                        top: 60,
-                        right: 20,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black45,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: Row(
-                            children: List.generate(themes.length, (idx) {
-                              return Container(
-                                width: idx == _currentLookIndex ? 18 : 6,
-                                height: 6,
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 2.5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: idx == _currentLookIndex
-                                      ? AppColors.coralOrange
-                                      : Colors.white54,
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-
-              // Inspiration Description Box
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.cardBorder),
+            ],
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.auto_awesome,
+                  size: 13,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    'BẠN CHỌN DỊP, NÉORA CHỌN ĐỒ',
+                    style: AppTypography.architecturalCode.copyWith(
+                      color: AppColors.primary,
+                      fontSize: 10,
+                      letterSpacing: 1.3,
+                    ),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Một ngày đẹp,\nbắt đầu từ bạn.',
+              style: AppTypography.editorialHeadline.copyWith(fontSize: 28),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Phối vừa gu. Chi vừa đủ. Tự tin là chính mình.',
+              style: AppTypography.body,
+            ),
+            const SizedBox(height: 20),
+
+            // 1. Bạn đi đâu?
+            const Text(
+              'Bạn đi đâu?',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: _occasions.map((occ) {
+                final isSelected = _selectedOccasion == occ.label;
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: occ.label == _occasions.last.label ? 0 : 8,
+                    ),
+                    child: InkWell(
+                      onTap: () =>
+                          setState(() => _selectedOccasion = occ.label),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: AppColors.softPeach,
-                          borderRadius: BorderRadius.circular(10),
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.studioGray,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.cardBorder,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.format_quote_rounded,
-                          color: AppColors.coralOrange,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'CẢM HỨNG PHỐI ĐỒ NÉORA',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.8,
-                                color: AppColors.camelGold,
-                              ),
+                            Icon(
+                              occ.icon,
+                              size: 18,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              currentLook.inspiration,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                height: 1.5,
-                                color: AppColors.textSecondary,
+                              occ.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 18),
+
+            // 2. Ngân sách cả bộ
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.studioGray,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Ngân sách cả bộ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        _formatVnd(_budget),
+                        style: const TextStyle(
+                          fontFamily: AppTypography.sansFont,
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ),
-
-              // Items Header
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-                  child: Row(
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: AppColors.primary,
+                      inactiveTrackColor: AppColors.divider,
+                      thumbColor: AppColors.primary,
+                      overlayColor: AppColors.primary.withValues(alpha: 0.12),
+                      trackHeight: 3,
+                    ),
+                    child: Slider(
+                      value: _budget,
+                      min: 500000,
+                      max: 3000000,
+                      divisions: 25,
+                      onChanged: (v) => setState(() => _budget = v),
+                    ),
+                  ),
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'CÁC MÓN TRONG SET (${currentLook.items.length})',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.8,
-                          color: AppColors.brandBlack,
+                        '500.000 ₫',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: AppColors.textMuted,
                         ),
                       ),
-                      const Text(
-                        'Chạm điểm ghim để chọn',
+                      Text(
+                        '3.000.000 ₫',
                         style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 10.5,
                           color: AppColors.textMuted,
                         ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
+            ),
+            const SizedBox(height: 16),
 
-              // Outfit Breakdown Items
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final item = currentLook.items[index];
-                    final isSelected = _selectedHotspotIndex == index;
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.coralOrange
-                              : AppColors.cardBorder,
-                          width: isSelected ? 1.8 : 1.0,
+            // 3. Dành cho (Gender chips)
+            Row(
+              children: [
+                const Text(
+                  'Dành cho:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ..._genders.map((g) {
+                  final active = _selectedGender == g;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedGender = g),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 5,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppColors.coralOrange.withValues(
-                                    alpha: 0.15,
-                                  ),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: InkWell(
-                        onTap: () {
-                          if (item.product != null) {
-                            Navigator.push(
-                              context,
-                              AppRouter.page(
-                                builder: (_) =>
-                                    ProductDetailScreen(product: item.product!),
-                              ),
-                            );
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(18),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  width: 64,
-                                  height: 64,
-                                  color: const Color(0xFFF7F4EF),
-                                  child: ProductVisualWidget(
-                                    imageType: item.imageType,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.category,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.camelGold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      item.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          _formatVnd(item.price),
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w900,
-                                            color: AppColors.primaryBurgundy,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _formatVnd(item.originalPrice),
-                                          style: const TextStyle(
-                                            fontSize: 11.5,
-                                            color: AppColors.textMuted,
-                                            decoration:
-                                                TextDecoration.lineThrough,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                size: 14,
-                                color: AppColors.textMuted,
-                              ),
-                            ],
+                        decoration: BoxDecoration(
+                          color: active
+                              ? AppColors.primary
+                              : AppColors.background,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: active
+                                ? AppColors.primary
+                                : AppColors.cardBorder,
+                          ),
+                        ),
+                        child: Text(
+                          g,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: active
+                                ? Colors.white
+                                : AppColors.textPrimary,
                           ),
                         ),
                       ),
-                    );
-                  }, childCount: currentLook.items.length),
+                    ),
+                  );
+                }),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // 4. Outfits Section Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text(
+                    '2 outfit vừa ngân sách',
+                    style: AppTypography.editorialTitle,
+                  ),
                 ),
+                Text(
+                  _selectedOccasion,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Featured Outfit Card (Nữ)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.cardBorder),
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(5),
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: 1.05,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            primaryOutfit.imagePath,
+                            fit: BoxFit.cover,
+                            alignment: _imageAlignment(primaryOutfit.imagePath),
+                          ),
+                          Positioned(
+                            top: 12,
+                            left: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.background.withValues(
+                                  alpha: 0.92,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome,
+                                    size: 11,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    primaryOutfit.badge,
+                                    style: const TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.8,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                primaryOutfit.title,
+                                style: AppTypography.editorialTitle,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.softPeach,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                diffFromBudget > 0
+                                    ? 'Thấp hơn ngân sách ${_formatVnd(diffFromBudget)}'
+                                    : 'Vừa ngân sách',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          primaryOutfit.subtitle,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Divider(height: 1, color: AppColors.divider),
+                        ),
+                        ...primaryOutfit.items.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '• ${item.title}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  _formatVnd(item.price),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 46,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedOutfitIndex = 0;
+                                _showOutfitDetail = true;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            child: Text(
+                              'Xem outfit • ${_formatVnd(primaryOutfit.totalPrice)} →',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-              // Bottom Breathing Room above floating bar
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
-            ],
-          ),
+            const SizedBox(height: 14),
 
-          // Floating Transparent Top Navigation
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
+            // Secondary Outfit Card (Nam)
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedOutfitIndex = 1;
+                  _showOutfitDetail = true;
+                });
+              },
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.studioGray,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.cardBorder),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.black.withValues(alpha: 0.5),
-                      radius: 20,
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 16,
-                          color: Colors.white,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: SizedBox(
+                        width: 82,
+                        height: 96,
+                        child: Image.asset(
+                          secondaryOutfit.imagePath,
+                          fit: BoxFit.cover,
+                          alignment: _imageAlignment(secondaryOutfit.imagePath),
                         ),
-                        onPressed: () => Navigator.pop(context),
                       ),
                     ),
-                    const Text(
-                      'LOOKBOOK NÉORA',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                        color: Colors.white,
-                        shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
-                      ),
-                    ),
-                    CircleAvatar(
-                      backgroundColor: Colors.black.withValues(alpha: 0.5),
-                      radius: 20,
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.shopping_bag_outlined,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            AppRouter.page(builder: (_) => const CartScreen()),
-                          );
-                        },
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            secondaryOutfit.badge,
+                            style: const TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.0,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            secondaryOutfit.title,
+                            style: const TextStyle(
+                              fontFamily: AppTypography.serifFont,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            secondaryOutfit.subtitle,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatVnd(secondaryOutfit.totalPrice),
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const Text(
+                                'Xem chi tiết →',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // Floating Bottom Bundle Purchase Dock
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(26),
-                  topRight: Radius.circular(26),
+  // ===========================================================================
+  // SCREEN 9: Chi tiết outfit - NÉORA
+  // ===========================================================================
+  Widget _buildOutfitDetailScreen(LookbookThemeModel outfit) {
+    final selectedTotal = outfit.items.asMap().entries.fold<double>(
+      0,
+      (sum, entry) =>
+          _checkedItems.contains(entry.key) ? sum + entry.value.price : sum,
+    );
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            size: 20,
+            color: AppColors.textPrimary,
+          ),
+          onPressed: () {
+            if (widget.initialShowDetail) {
+              Navigator.maybePop(context);
+            } else {
+              setState(() => _showOutfitDetail = false);
+            }
+          },
+        ),
+        centerTitle: true,
+        title: const Text(
+          'Outfit của bạn',
+          style: TextStyle(
+            fontFamily: AppTypography.serifFont,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.shopping_bag_outlined,
+              size: 20,
+              color: AppColors.textPrimary,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                AppRouter.page(builder: (_) => const CartScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Hero Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: AspectRatio(
+                aspectRatio: 0.95,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      outfit.imagePath,
+                      fit: BoxFit.cover,
+                      alignment: _imageAlignment(outfit.imagePath),
+                    ),
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.background.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${outfit.occasion} • ${outfit.gender}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                border: const Border(top: BorderSide(color: Color(0xFFEBE5DC))),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.10),
-                    blurRadius: 20,
-                    offset: const Offset(0, -4),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Title & Budget Pill
+            Text(outfit.title, style: AppTypography.editorialHeadline),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  _formatVnd(selectedTotal),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.softPeach,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Trong ngân sách (${_formatVnd(_budget)})',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Stylist Tip Box
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.softPeach,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_outlined,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      outfit.inspiration,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        height: 1.45,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
+            ),
+            const SizedBox(height: 22),
+
+            // Các món trong outfit
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Các món trong outfit',
+                    style: AppTypography.editorialTitle,
+                  ),
+                ),
+                Text(
+                  'Đã chọn ${_checkedItems.length}/${outfit.items.length}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            ...outfit.items.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final item = entry.value;
+              final isChecked = _checkedItems.contains(idx);
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isChecked ? AppColors.primary : AppColors.cardBorder,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: Checkbox(
+                        value: isChecked,
+                        activeColor: AppColors.primary,
+                        onChanged: (_) {
+                          setState(() {
+                            if (isChecked) {
+                              _checkedItems.remove(idx);
+                            } else {
+                              _checkedItems.add(idx);
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: () {
+                        if (item.product != null) {
+                          Navigator.push(
+                            context,
+                            AppRouter.page(
+                              builder: (_) =>
+                                  ProductDetailScreen(product: item.product!),
+                            ),
+                          );
+                        }
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: SizedBox(
+                          width: 58,
+                          height: 66,
+                          child: Image.asset(
+                            item.imagePath,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              const Text(
-                                'TRỌN BỘ OUTFIT',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.6,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.softPeach,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  'TIẾT KIỆM 15%',
-                                  style: TextStyle(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppColors.coralOrange,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                _formatVnd(currentLook.bundlePrice),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.primaryBurgundy,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _formatVnd(currentLook.totalOriginalPrice),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textMuted,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Text(
-                        'Tiết kiệm ${_formatVnd(currentLook.savings)}',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.liveGreen,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: () => _addBundleToCart(currentLook),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.brandBlack,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.auto_awesome_rounded,
-                            size: 18,
-                            color: AppColors.camelGold,
-                          ),
-                          SizedBox(width: 8),
                           Text(
-                            'MUA TRỌN BỘ OUTFIT (TIẾT KIỆM 15%)',
-                            style: TextStyle(
+                            item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
                               fontSize: 13.5,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.3,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.studioGray,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              item.category,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _formatVnd(item.price),
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
                             ),
                           ),
                         ],
                       ),
                     ),
+                  ],
+                ),
+              );
+            }),
+
+            const SizedBox(height: 20),
+
+            // Đổi một chút, vẫn là bạn
+            const Text(
+              'Đổi một chút, vẫn là bạn',
+              style: AppTypography.editorialTitle,
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Thay đổi phụ kiện trong ngân sách của bạn.',
+              style: AppTypography.body,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildAlternativeCard(
+                    index: 0,
+                    image: 'assets/images/real/p_bag.jpg',
+                    title: 'Túi vai da - Đen',
+                    price: '490.000 ₫',
+                    note: 'Cùng mức giá',
                   ),
-                ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildAlternativeCard(
+                    index: 1,
+                    image: 'assets/images/real/p_sneaker.jpg',
+                    title: 'Túi tote vải - Kem',
+                    price: '290.000 ₫',
+                    note: 'Tiết kiệm 200.000 ₫',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      bottomSheet: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          border: Border(top: BorderSide(color: AppColors.divider)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tổng ${_checkedItems.length} món đã chọn',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      _formatVnd(selectedTotal),
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: _checkedItems.isEmpty
+                    ? null
+                    : () => _addSelectedToCart(outfit),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                child: Text('Thêm ${_checkedItems.length} món vào giỏ'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlternativeCard({
+    required int index,
+    required String image,
+    required String title,
+    required String price,
+    required String note,
+  }) {
+    final isSelected = _selectedAltBagIndex == index;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isSelected ? AppColors.primary : AppColors.cardBorder,
+          width: isSelected ? 1.5 : 1.0,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: AspectRatio(
+              aspectRatio: 1.15,
+              child: Image.asset(image, fit: BoxFit.cover),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            price,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            note,
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 32,
+            child: OutlinedButton(
+              onPressed: () {
+                setState(() {
+                  _selectedAltBagIndex = isSelected ? -1 : index;
+                });
+              },
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                backgroundColor: isSelected
+                    ? AppColors.primary
+                    : Colors.transparent,
+                foregroundColor: isSelected
+                    ? Colors.white
+                    : AppColors.textPrimary,
+                side: BorderSide(
+                  color: isSelected ? AppColors.primary : AppColors.cardBorder,
+                ),
+              ),
+              child: Text(
+                isSelected ? 'Đã chọn ✓' : 'Chọn thay thế',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

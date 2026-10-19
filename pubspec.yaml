@@ -74,3 +74,9 @@ flutter:
     - family: PlusJakartaSans
       fonts:
         - asset: assets/fonts/PlusJakartaSans.ttf
+    - family: NotoSerif
+      fonts:
+        - asset: assets/fonts/NotoSerif.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf

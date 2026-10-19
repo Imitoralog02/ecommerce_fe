@@ -23,11 +23,34 @@ class AppTheme {
         centerTitle: true,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaryBurgundy,
+          side: const BorderSide(color: AppColors.cardBorder),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          textStyle: const TextStyle(
+            fontFamily: AppTypography.sansFont,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primaryBurgundy,
+          textStyle: const TextStyle(
+            fontFamily: AppTypography.sansFont,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryBurgundy,
           foregroundColor: Colors.white,
-          shape: const StadiumBorder(),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
           elevation: 0,
           textStyle: const TextStyle(
             fontFamily: AppTypography.sansFont,

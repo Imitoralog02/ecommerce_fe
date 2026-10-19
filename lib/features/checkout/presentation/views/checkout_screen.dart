@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/widgets/editorial_heading.dart';
 import '../../../address/presentation/viewmodels/address_viewmodel.dart';
 import '../../../address/presentation/views/address_book_screen.dart';
 import '../../../cart/domain/entities/cart_snapshot.dart';
@@ -25,6 +27,14 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
+  final _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
   void _processPayment() async {
     final strings = AppLocalizations.of(context);
     final checkout = ref.read(checkoutViewModelProvider);
@@ -111,51 +121,75 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final totalText = CurrencyFormatter.vnd(quote.total);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: Center(
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: AppColors.brandBlack,
-            ),
-            onPressed: () => Navigator.pop(context),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            size: 20,
+            color: AppColors.textPrimary,
           ),
+          onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: Text(
-          strings.checkoutTitle,
-          style: const TextStyle(
-            fontSize: 16,
+        title: const Text(
+          'Thanh toán',
+          style: TextStyle(
+            fontFamily: AppTypography.serifFont,
+            fontSize: 17,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0.2,
-            color: AppColors.brandBlack,
+            color: AppColors.textPrimary,
           ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 12,
-          bottom: 120,
-        ),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Delivery Address Card (thumb2.jpeg)
-            Text(
-              strings.deliveryAddressSection,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                color: AppColors.textMuted,
-              ),
+            const EditorialHeading(
+              title: 'Sắp đến tay bạn.',
+              subtitle: 'Thông tin của bạn luôn được bảo mật',
+              padding: EdgeInsets.fromLTRB(0, 8, 0, 20),
+            ),
+
+            // 1. Địa chỉ nhận hàng
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Địa chỉ nhận hàng',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.editorialTitle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      AppRouter.page(
+                        builder: (_) =>
+                            const AddressBookScreen(isSelectMode: true),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Thay đổi',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             GestureDetector(
@@ -169,120 +203,76 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               },
               behavior: HitTestBehavior.opaque,
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFE5E5EA)),
+                  color: AppColors.studioGray,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.cardBorder),
                 ),
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF4F4F6),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.location_on_outlined,
-                        size: 20,
-                        color: AppColors.brandBlack,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  selectedAddress?.recipientName ??
-                                      'Chọn địa chỉ giao hàng',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.brandBlack,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              if (selectedAddress != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF0F0F2),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    selectedAddress.label.toUpperCase(),
-                                    style: const TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            selectedAddress?.fullAddress ??
-                                'Vui lòng thêm hoặc chọn địa chỉ giao hàng.',
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            selectedAddress != null
+                                ? '${selectedAddress.recipientName} • ${selectedAddress.phoneNumber}'
+                                : 'Chọn địa chỉ giao hàng',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 12.5,
-                              color: AppColors.textSecondary,
-                              height: 1.35,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
                             ),
                           ),
-                          if (selectedAddress != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              selectedAddress.phoneNumber,
+                        ),
+                        if (selectedAddress != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.softPeach,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              selectedAddress.label.toUpperCase(),
                               style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textMuted,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
                               ),
                             ),
-                          ],
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.edit_outlined,
-                      size: 18,
-                      color: AppColors.textMuted,
+                    const SizedBox(height: 6),
+                    Text(
+                      selectedAddress?.fullAddress ??
+                          'Vui lòng thêm hoặc chọn địa chỉ giao hàng.',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
 
-            // 2. Shipping Method
-            Text(
-              strings.shippingMethodSection,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                color: AppColors.textMuted,
-              ),
-            ),
+            // 2. Giao hàng
+            const Text('Giao hàng', style: AppTypography.editorialTitle),
             const SizedBox(height: 10),
             _buildOptionTile(
               isSelected: checkoutState.shippingType == ShippingType.standard,
               onTap: () => checkoutNotifier.setShipping(ShippingType.standard),
-              title: strings.standardShippingTitle,
-              subtitle: strings.standardShippingSubtitle,
+              title: 'Giao tiêu chuẩn',
+              subtitle: 'Nhận hàng dự kiến 20–22/10',
               trailing: strings.freeLabel,
               isPositiveTrailing: true,
             ),
@@ -290,34 +280,51 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             _buildOptionTile(
               isSelected: checkoutState.shippingType == ShippingType.express,
               onTap: () => checkoutNotifier.setShipping(ShippingType.express),
-              title: strings.expressShippingTitle,
-              subtitle: strings.expressShippingSubtitle,
+              title: 'Giao nhanh',
+              subtitle: 'Nhận hàng trong 24 giờ',
               trailing: CurrencyFormatter.vnd(30000),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
 
-            // 3. Payment Method & NÉORA Obsidian Card
-            Text(
-              strings.paymentMethodSection,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                color: AppColors.textMuted,
-              ),
+            // 3. Thanh toán bằng
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Thanh toán bằng',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.editorialTitle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: GestureDetector(
+                    onTap: _managePaymentMethods,
+                    child: Text(
+                      strings.managePaymentMethodsAction,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-
-            // Payment Radio Options
+            const SizedBox(height: 10),
             _buildOptionTile(
-              isSelected: checkoutState.paymentType == PaymentType.applePay,
-              onTap: paymentMethods.deviceWalletEnabled
-                  ? () => checkoutNotifier.setPayment(PaymentType.applePay)
-                  : null,
-              title: strings.deviceWalletPaymentTitle,
-              subtitle: paymentMethods.deviceWalletEnabled
-                  ? strings.mockPaymentLabel
-                  : strings.paymentUnavailableLabel,
+              isSelected:
+                  checkoutState.paymentType == PaymentType.cashOnDelivery,
+              onTap: () =>
+                  checkoutNotifier.setPayment(PaymentType.cashOnDelivery),
+              title: 'Trả tiền khi nhận hàng',
+              subtitle: 'Kiểm tra hàng trước khi thanh toán',
             ),
             const SizedBox(height: 8),
             _buildOptionTile(
@@ -325,7 +332,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               onTap: selectedCard == null
                   ? null
                   : () => checkoutNotifier.setPayment(PaymentType.creditCard),
-              title: strings.creditDebitCard,
+              title: 'Thẻ ATM / Visa / Mastercard',
               subtitle: selectedCard == null
                   ? strings.paymentUnavailableLabel
                   : strings.mockCardEnding(selectedCard.lastFour),
@@ -338,7 +345,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   : null,
               title: 'MoMo',
               subtitle: paymentMethods.momoLinked
-                  ? strings.mockPaymentLabel
+                  ? 'Thanh toán nhanh qua ứng dụng MoMo'
                   : strings.paymentUnavailableLabel,
             ),
             const SizedBox(height: 8),
@@ -354,30 +361,106 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
             const SizedBox(height: 8),
             _buildOptionTile(
-              isSelected:
-                  checkoutState.paymentType == PaymentType.cashOnDelivery,
-              onTap: () =>
-                  checkoutNotifier.setPayment(PaymentType.cashOnDelivery),
-              title: strings.cashOnDelivery,
-              subtitle: strings.cashOnDeliverySubtitle,
+              isSelected: checkoutState.paymentType == PaymentType.applePay,
+              onTap: paymentMethods.deviceWalletEnabled
+                  ? () => checkoutNotifier.setPayment(PaymentType.applePay)
+                  : null,
+              title: strings.deviceWalletPaymentTitle,
+              subtitle: paymentMethods.deviceWalletEnabled
+                  ? strings.mockPaymentLabel
+                  : strings.paymentUnavailableLabel,
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: _managePaymentMethods,
-                icon: const Icon(Icons.settings_outlined, size: 17),
-                label: Text(strings.managePaymentMethodsAction),
-              ),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
 
-            // 4. Order Total Breakdown
+            // 4. Đơn hàng của bạn (compact items + note)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Đơn hàng của bạn',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.editorialTitle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${cartState.totalItemCount} sản phẩm',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE5E5EA)),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Column(
+                children: [
+                  ...cartState.items.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${item.quantity}x ${item.product.title} (${item.selectedSize})',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            item.formattedTotalPrice,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 16, color: AppColors.divider),
+                  TextField(
+                    controller: _noteController,
+                    style: const TextStyle(fontSize: 12.5),
+                    decoration: const InputDecoration(
+                      hintText: 'Ghi chú cho đơn hàng (không bắt buộc)',
+                      hintStyle: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                      isDense: true,
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // 5. Order Total Breakdown
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.studioGray,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.cardBorder),
               ),
               child: Column(
                 children: [
@@ -421,7 +504,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   _buildBillLine(strings.taxLabel, strings.taxIncludedLabel),
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 10),
-                    child: Divider(color: Color(0xFFE5E5EA), height: 1),
+                    child: Divider(color: AppColors.divider, height: 1),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -434,7 +517,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           style: const TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.brandBlack,
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ),
@@ -444,9 +527,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         child: Text(
                           totalText,
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontFamily: AppTypography.sansFont,
+                            fontSize: 19,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.brandBlack,
+                            color: AppColors.primary,
                           ),
                         ),
                       ),
@@ -455,12 +539,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
 
-            // 5. Place Order Button
+            // 6. Place Order Button
             SizedBox(
               width: double.infinity,
-              height: 54,
+              height: 52,
               child: ElevatedButton(
                 onPressed:
                     checkoutState.isProcessing ||
@@ -469,10 +553,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ? null
                     : _processPayment,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.brandBlack,
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  shape: const StadiumBorder(),
-                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
                 child: checkoutState.isProcessing
                     ? const SizedBox(
@@ -485,20 +570,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       )
                     : FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.lock_outline_rounded, size: 16),
-                            const SizedBox(width: 8),
-                            Text(
-                              strings.placeOrderAction,
-                              style: const TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          'Đặt hàng • $totalText →',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
               ),
@@ -530,7 +607,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           style: const TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w600,
-            color: AppColors.brandBlack,
+            color: AppColors.textPrimary,
           ),
         ),
       ],
@@ -552,36 +629,32 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: isSelected ? AppColors.softPeach : Colors.white,
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(
-              color: isSelected
-                  ? AppColors.brandBlack
-                  : const Color(0xFFE5E5EA),
-              width: isSelected ? 1.8 : 1.0,
+              color: isSelected ? AppColors.primary : AppColors.cardBorder,
+              width: isSelected ? 1.5 : 1.0,
             ),
           ),
           child: Row(
             children: [
               Container(
-                width: 20,
-                height: 20,
+                width: 18,
+                height: 18,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isSelected
-                        ? AppColors.brandBlack
-                        : AppColors.textMuted,
-                    width: 2,
+                    color: isSelected ? AppColors.primary : AppColors.textMuted,
+                    width: 1.8,
                   ),
                 ),
                 child: isSelected
                     ? Center(
                         child: Container(
-                          width: 10,
-                          height: 10,
+                          width: 9,
+                          height: 9,
                           decoration: const BoxDecoration(
-                            color: AppColors.brandBlack,
+                            color: AppColors.primary,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -600,7 +673,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         fontWeight: isSelected
                             ? FontWeight.w700
                             : FontWeight.w600,
-                        color: AppColors.brandBlack,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -623,7 +696,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     fontWeight: FontWeight.w700,
                     color: isPositiveTrailing
                         ? AppColors.liveGreen
-                        : AppColors.brandBlack,
+                        : AppColors.textPrimary,
                   ),
                 ),
               ],

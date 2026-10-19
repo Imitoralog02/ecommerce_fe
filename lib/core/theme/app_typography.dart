@@ -4,23 +4,43 @@ import 'app_colors.dart';
 class AppTypography {
   AppTypography._();
 
-  static const String serifFont = 'PlayfairDisplay';
-  static const String sansFont = 'PlusJakartaSans';
+  static const String serifFont = 'NotoSerif';
+  static const String sansFont = 'Inter';
+
+  /// Book-style serif used by the Figma splash / onboarding headlines.
+  static const String bookSerifFont = 'NotoSerif';
+
+  static const TextStyle splashLogo = TextStyle(
+    fontFamily: bookSerifFont,
+    fontSize: 24,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 1.2,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle splashHeadline = TextStyle(
+    fontFamily: bookSerifFont,
+    fontSize: 28,
+    fontWeight: FontWeight.w400,
+    letterSpacing: -0.2,
+    height: 1.22,
+    color: AppColors.textPrimary,
+  );
 
   // NÉORA Luxury Brand Masthead (Serif)
   static const TextStyle brandLogo = TextStyle(
     fontFamily: serifFont,
     fontSize: 22,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 3.5,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 1.8,
     color: AppColors.textPrimary,
   );
 
   static const TextStyle brandLogoSmall = TextStyle(
     fontFamily: serifFont,
     fontSize: 16,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 2.5,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 1.4,
     color: AppColors.textPrimary,
   );
 
@@ -28,7 +48,7 @@ class AppTypography {
   static const TextStyle editorialHeadline = TextStyle(
     fontFamily: serifFont,
     fontSize: 26,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w400,
     letterSpacing: -0.3,
     height: 1.25,
     color: AppColors.textPrimary,
@@ -37,7 +57,7 @@ class AppTypography {
   static const TextStyle editorialTitle = TextStyle(
     fontFamily: serifFont,
     fontSize: 20,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w500,
     letterSpacing: -0.2,
     height: 1.2,
     color: AppColors.textPrimary,
@@ -47,7 +67,7 @@ class AppTypography {
   static const TextStyle sectionHeader = TextStyle(
     fontFamily: serifFont,
     fontSize: 16.5,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w500,
     letterSpacing: -0.2,
     color: AppColors.textPrimary,
   );
@@ -64,7 +84,7 @@ class AppTypography {
   static const TextStyle cardTitle = TextStyle(
     fontFamily: serifFont,
     fontSize: 14,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
     color: AppColors.textPrimary,
   );
@@ -72,7 +92,7 @@ class AppTypography {
   static const TextStyle productTitleLarge = TextStyle(
     fontFamily: serifFont,
     fontSize: 23,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w500,
     letterSpacing: -0.3,
     color: AppColors.textPrimary,
   );

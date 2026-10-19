@@ -23,22 +23,15 @@ class FloatingLiquidGlassDock extends StatelessWidget {
       AppLocalizations,
     );
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF502814).withValues(alpha: 0.14),
-            blurRadius: 28,
-            offset: const Offset(0, -8),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(top: BorderSide(color: AppColors.divider, width: 1)),
       ),
       child: SafeArea(
         top: false,
         child: Container(
-          height: 72,
-          padding: const EdgeInsets.only(top: 8, bottom: 4),
+          height: 68,
+          padding: const EdgeInsets.only(top: 6, bottom: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -50,14 +43,14 @@ class FloatingLiquidGlassDock extends StatelessWidget {
               ),
               _buildNavItem(
                 index: 1,
-                icon: Icons.grid_view_outlined,
-                activeIcon: Icons.grid_view_rounded,
+                icon: Icons.search_rounded,
+                activeIcon: Icons.search_rounded,
                 label: strings?.discoverTab ?? 'Khám phá',
               ),
               _buildNavItem(
                 index: 2,
-                icon: Icons.notifications_none_rounded,
-                activeIcon: Icons.notifications_rounded,
+                icon: Icons.auto_awesome_outlined,
+                activeIcon: Icons.auto_awesome_rounded,
                 label: strings?.notificationsTab ?? 'Thông báo',
                 badgeCount: unreadNotificationsCount,
                 isDotOnly: true,
@@ -109,30 +102,22 @@ class FloatingLiquidGlassDock extends StatelessWidget {
         onTap: () => onItemSelected(index),
         behavior: HitTestBehavior.opaque,
         child: SizedBox(
-          width: 66,
+          width: 64,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Pill Container for Active State (.tic)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic,
-                width: 48,
-                height: 32,
-                transform: Matrix4.translationValues(0, isSelected ? -2 : 0, 0),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.softPeach : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+              SizedBox(
+                width: 44,
+                height: 26,
                 child: Center(
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
                       Icon(
                         isSelected ? activeIcon : icon,
-                        size: 22,
+                        size: 21,
                         color: isSelected
-                            ? AppColors.coralOrange
+                            ? AppColors.primary
                             : AppColors.textMuted,
                       ),
                       if (badgeCount > 0)
@@ -144,10 +129,10 @@ class FloatingLiquidGlassDock extends StatelessWidget {
                                   width: 8,
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: AppColors.coralOrange,
+                                    color: AppColors.primary,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: Colors.white,
+                                      color: AppColors.background,
                                       width: 1.5,
                                     ),
                                   ),
@@ -158,10 +143,10 @@ class FloatingLiquidGlassDock extends StatelessWidget {
                                     vertical: 1.5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.coralOrange,
+                                    color: AppColors.primary,
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: Colors.white,
+                                      color: AppColors.background,
                                       width: 1.5,
                                     ),
                                   ),
@@ -173,7 +158,7 @@ class FloatingLiquidGlassDock extends StatelessWidget {
                                     badgeCount > 9 ? '9+' : '$badgeCount',
                                     style: const TextStyle(
                                       fontSize: 8.5,
-                                      fontWeight: FontWeight.w900,
+                                      fontWeight: FontWeight.w600,
                                       color: Colors.white,
                                       height: 1.0,
                                     ),
@@ -185,23 +170,29 @@ class FloatingLiquidGlassDock extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 3),
-
-              // Label Text
+              const SizedBox(height: 2),
               MediaQuery.withClampedTextScaling(
-                maxScaleFactor: 1.4,
+                maxScaleFactor: 1.3,
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 10.5,
-                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                    color: isSelected
-                        ? AppColors.coralOrange
-                        : AppColors.textMuted,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? AppColors.primary : AppColors.textMuted,
                     letterSpacing: 0.1,
                   ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: isSelected ? 4 : 0,
+                height: 4,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
                 ),
               ),
             ],

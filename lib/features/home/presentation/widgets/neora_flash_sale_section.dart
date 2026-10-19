@@ -71,19 +71,13 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(3),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF1E1C1A), Color(0xFF2E2822)],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 26,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        boxShadow: const [],
       ),
       padding: const EdgeInsets.only(top: 14, bottom: 16),
       child: Column(
@@ -105,7 +99,7 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w600,
                           fontStyle: FontStyle.italic,
                           letterSpacing: 0.5,
                           color: Colors.white,
@@ -144,7 +138,7 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                         ':',
                         style: TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -155,7 +149,7 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                         ':',
                         style: TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -191,14 +185,8 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                     width: 132,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(3),
+                      boxShadow: const [],
                     ),
                     padding: const EdgeInsets.all(6),
                     child: Column(
@@ -211,11 +199,11 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                               height: 136,
                               width: double.infinity,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(3),
                                 color: const Color(0xFFF5EEE4),
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(3),
                                 child: product.imagePath != null
                                     ? Image.asset(
                                         product.imagePath!,
@@ -249,7 +237,7 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                                     '-$discount%',
                                     style: const TextStyle(
                                       fontSize: 10.5,
-                                      fontWeight: FontWeight.w900,
+                                      fontWeight: FontWeight.w600,
                                       color: Colors.white,
                                     ),
                                   ),
@@ -267,7 +255,7 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                             _formatVnd(product.price),
                             style: const TextStyle(
                               fontSize: 14.5,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w600,
                               color: AppColors.saleRed,
                             ),
                           ),
@@ -311,7 +299,7 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
                                       : '🔥 Đã bán $soldPercent%',
                                   style: const TextStyle(
                                     fontSize: 9.5,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w600,
                                     color: Color(0xFF1A1815),
                                     height: 1.0,
                                   ),
@@ -345,7 +333,7 @@ class _NeoraFlashSaleSectionState extends State<NeoraFlashSaleSection> {
           text,
           style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w600,
             color: Color(0xFF0E0E0E),
           ),
         ),

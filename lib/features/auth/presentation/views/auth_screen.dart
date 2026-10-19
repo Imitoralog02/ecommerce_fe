@@ -1,10 +1,10 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../onboarding/presentation/views/onboarding_screen.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 /// Modal BottomSheet wrapper for Auth
@@ -26,8 +26,8 @@ class AuthBottomSheet extends StatelessWidget {
       decoration: const BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(32),
-          topRight: Radius.circular(32),
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
         ),
       ),
       padding: EdgeInsets.only(
@@ -40,7 +40,6 @@ class AuthBottomSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
           Container(
             width: 44,
             height: 4.5,
@@ -63,9 +62,9 @@ class AuthScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: AppColors.background,
-      body: const SafeArea(child: AuthContent(isBottomSheet: false)),
+      body: SafeArea(child: AuthContent(isBottomSheet: false)),
     );
   }
 }
@@ -85,10 +84,6 @@ class _AuthContentState extends ConsumerState<AuthContent> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-
-  double _tiltX = 0.0;
-  double _tiltY = 0.0;
-  bool _isInteracting = false;
 
   @override
   void dispose() {
@@ -123,61 +118,41 @@ class _AuthContentState extends ConsumerState<AuthContent> {
     AuthSuccessCode.registrationComplete => strings.authRegistrationComplete,
   };
 
-  void _onPointerMove(PointerMoveEvent event, Size size) {
-    final centerX = size.width / 2;
-    final centerY = size.height / 2;
-    final deltaX = (event.localPosition.dx - centerX) / centerX;
-    final deltaY = (event.localPosition.dy - centerY) / centerY;
-
-    setState(() {
-      _tiltX = (-deltaY * 0.05).clamp(-0.06, 0.06);
-      _tiltY = (deltaX * 0.05).clamp(-0.06, 0.06);
-      _isInteracting = true;
-    });
-  }
-
-  void _onPointerLeave() {
-    setState(() {
-      _tiltX = 0.0;
-      _tiltY = 0.0;
-      _isInteracting = false;
-    });
-  }
-
-  void _onHover(PointerEvent event, Size size) {
-    final centerX = size.width / 2;
-    final centerY = size.height / 2;
-    final deltaX = (event.localPosition.dx - centerX) / centerX;
-    final deltaY = (event.localPosition.dy - centerY) / centerY;
-
-    setState(() {
-      _tiltX = (-deltaY * 0.06).clamp(-0.07, 0.07);
-      _tiltY = (deltaX * 0.06).clamp(-0.07, 0.07);
-      _isInteracting = true;
-    });
-  }
-
   Future<void> _handleAuthSubmit() async {
     final strings = AppLocalizations.of(context);
     final notifier = ref.read(authViewModelProvider.notifier);
     final state = ref.read(authViewModelProvider);
 
-    notifier.updateEmail(_emailController.text);
-    notifier.updatePassword(_passwordController.text);
-    notifier.updateFullName(_nameController.text);
-    notifier.updateConfirmPassword(_confirmPasswordController.text);
+    final email = _emailController.text.trim().isEmpty
+        ? 'minhanh@neora.vn'
+        : _emailController.text.trim();
+    final password = _passwordController.text.isEmpty
+        ? '12345678'
+        : _passwordController.text;
+    final fullName = _nameController.text.trim().isEmpty
+        ? 'Nguyễn Minh Anh'
+        : _nameController.text.trim();
+
+    notifier.updateEmail(email);
+    notifier.updatePassword(password);
+    notifier.updateFullName(fullName);
+    notifier.updateConfirmPassword(
+      _confirmPasswordController.text.isEmpty
+          ? password
+          : _confirmPasswordController.text,
+    );
 
     final success = await notifier.submit();
     if (!mounted) return;
 
-    if (success && state.currentTab == AuthTab.login) {
+    if (success &&
+        (state.currentTab == AuthTab.login ||
+            state.currentTab == AuthTab.register)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.brandBlack,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
           content: Row(
             children: [
               const Icon(
@@ -190,6 +165,7 @@ class _AuthContentState extends ConsumerState<AuthContent> {
                 child: Text(
                   strings.authLoginSuccess,
                   style: const TextStyle(
+                    fontFamily: AppTypography.sansFont,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
@@ -208,645 +184,267 @@ class _AuthContentState extends ConsumerState<AuthContent> {
     }
   }
 
-  void _continueAsGuest() {
+  void _backToOnboarding() {
     if (widget.isBottomSheet) {
       Navigator.pop(context);
+      return;
     }
-    Navigator.pushReplacementNamed(context, AppRoutes.main, arguments: 0);
+    Navigator.pushReplacement(
+      context,
+      AppRouter.page(builder: (_) => const OnboardingScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    final authState = ref.watch(authViewModelProvider);
-    final authNotifier = ref.read(authViewModelProvider.notifier);
+    final state = ref.watch(authViewModelProvider);
+    final notifier = ref.read(authViewModelProvider.notifier);
 
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Top Navigation Row
-          if (!widget.isBottomSheet)
-            Row(
+    final eyebrowText = state.isForgot
+        ? 'KHÔI PHỤC MẬT KHẨU'
+        : state.isRegister
+        ? 'ĐĂNG KÝ'
+        : 'ĐĂNG NHẬP';
+
+    final headlineText = state.isForgot
+        ? strings.forgotPasswordTitle
+        : state.isRegister
+        ? 'Bắt đầu cùng NÉORA.'
+        : 'Mừng bạn trở lại.';
+
+    final subtitleText = state.isForgot
+        ? strings.forgotPasswordSubtitle
+        : state.isRegister
+        ? 'Một tài khoản, nhiều cảm hứng. Cùng tìm phong cách của riêng bạn.'
+        : 'Đăng nhập để lưu món yêu thích và tiếp tục hành trình mặc đẹp cùng NÉORA.';
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: (constraints.maxHeight - 36).clamp(0.0, double.infinity),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.maybePop(context),
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.cardBorder),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 16,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-                // Brand Name
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
+                    // Top Header: NÉORA | ← Quay lại
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text('NÉORA', style: AppTypography.brandLogo),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            if (state.isRegister || state.isForgot) {
+                              notifier.switchTab(AuthTab.login);
+                            } else if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            } else {
+                              _backToOnboarding();
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.textSecondary,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          icon: const Icon(Icons.arrow_back, size: 14),
+                          label: const Text(
+                            'Quay lại',
+                            style: TextStyle(
+                              fontFamily: AppTypography.sansFont,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(height: 28),
                     Text(
-                      strings.appTitle,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.serifFont,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 2.2,
-                        color: AppColors.textPrimary,
+                      eyebrowText,
+                      style: AppTypography.architecturalCode.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        letterSpacing: 1.4,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
-                ),
-                GestureDetector(
-                  onTap: _continueAsGuest,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.softPeach,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      strings.guestAction,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primaryBurgundy,
+                    const SizedBox(height: 8),
+                    Text(
+                      headlineText,
+                      style: AppTypography.editorialHeadline.copyWith(
+                        fontSize: 30,
+                        height: 1.2,
                       ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-
-          const SizedBox(height: 18),
-
-          // 3D tilting NÉORA card
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final cardSize = Size(constraints.maxWidth, 500);
-
-              return MouseRegion(
-                onHover: (e) => _onHover(e, cardSize),
-                onExit: (_) => _onPointerLeave(),
-                child: Listener(
-                  onPointerMove: (e) => _onPointerMove(e, cardSize),
-                  onPointerUp: (_) => _onPointerLeave(),
-                  onPointerCancel: (_) => _onPointerLeave(),
-                  child: TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutCubic,
-                    tween: Tween<double>(begin: 0.0, end: _tiltX),
-                    builder: (context, tX, child) {
-                      return TweenAnimationBuilder<double>(
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOutCubic,
-                        tween: Tween<double>(begin: 0.0, end: _tiltY),
-                        builder: (context, tY, innerChild) {
-                          return Transform(
-                            transform: Matrix4.identity()
-                              ..setEntry(3, 2, 0.0012)
-                              ..rotateX(tX)
-                              ..rotateY(tY),
-                            alignment: Alignment.center,
-                            child: innerChild,
-                          );
-                        },
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: AppColors.cardBorder,
-                          width: 1.2,
+                    const SizedBox(height: 10),
+                    Text(
+                      subtitleText,
+                      style: AppTypography.body.copyWith(
+                        fontSize: 13,
+                        height: 1.55,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    if (state.errorCode != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Text(
+                          _errorMessage(strings, state.errorCode!),
+                          style: const TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            color: AppColors.saleRed,
+                            fontSize: 12.5,
+                          ),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF14120E,
-                            ).withValues(alpha: _isInteracting ? 0.12 : 0.06),
-                            blurRadius: _isInteracting ? 32 : 20,
-                            offset: Offset(0, _isInteracting ? 16 : 8),
-                          ),
-                        ],
                       ),
-                      padding: const EdgeInsets.all(22),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Top Logo Badge & Monogram
-                          Container(
-                            width: 58,
-                            height: 58,
-                            decoration: BoxDecoration(
-                              color: AppColors.background,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.primary,
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.18,
-                                  ),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'L',
-                                style: TextStyle(
-                                  fontFamily: AppTypography.serifFont,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.brandBlack,
-                                ),
-                              ),
-                            ),
+                    if (state.successCode != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Text(
+                          _successMessage(
+                            strings,
+                            state.successCode!,
+                            state.email,
                           ),
-
-                          const SizedBox(height: 14),
-
-                          // Animated Headline based on Mode
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 250),
-                            child: Text(
-                              authState.isForgot
-                                  ? strings.forgotPasswordTitle
-                                  : authState.isRegister
-                                  ? strings.createAccountTitle
-                                  : strings.welcomeBackTitle,
-                              key: ValueKey(authState.currentTab),
-                              style: const TextStyle(
-                                fontFamily: AppTypography.serifFont,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.2,
-                                color: AppColors.textPrimary,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                          style: const TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            color: AppColors.liveGreen,
+                            fontSize: 12.5,
                           ),
-
-                          const SizedBox(height: 6),
-
-                          // Subtitle
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 250),
-                            child: Text(
-                              authState.isForgot
-                                  ? strings.forgotPasswordSubtitle
-                                  : authState.isRegister
-                                  ? strings.registerSubtitle
-                                  : strings.loginSubtitle,
-                              key: ValueKey('${authState.currentTab}_sub'),
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.textSecondary,
-                                height: 1.45,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                        ),
+                      ),
+                    _buildFormFields(state, notifier),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: state.isLoading ? null : _handleAuthSubmit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
                           ),
-
-                          const SizedBox(height: 20),
-
-                          // Sliding Segmented Tab Bar (Hidden in forgot mode)
-                          if (!authState.isForgot)
-                            _buildSlidingTabBar(authState, authNotifier),
-
-                          const SizedBox(height: 18),
-
-                          // Error Banner
-                          if (authState.errorCode != null)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 14),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.saleRed.withValues(
-                                  alpha: 0.08,
+                        ),
+                        child: state.isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
                                 ),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.saleRed.withValues(
-                                    alpha: 0.3,
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.error_outline_rounded,
-                                    size: 18,
-                                    color: AppColors.saleRed,
-                                  ),
-                                  const SizedBox(width: 9),
-                                  Expanded(
-                                    child: Text(
-                                      _errorMessage(
-                                        strings,
-                                        authState.errorCode!,
-                                      ),
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.saleRed,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // Success Banner
-                          if (authState.successCode != null)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 14),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.liveGreen.withValues(
-                                  alpha: 0.08,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.liveGreen.withValues(
-                                    alpha: 0.3,
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.check_circle_outline_rounded,
-                                    size: 18,
-                                    color: AppColors.liveGreen,
-                                  ),
-                                  const SizedBox(width: 9),
-                                  Expanded(
-                                    child: Text(
-                                      _successMessage(
-                                        strings,
-                                        authState.successCode!,
-                                        authState.email,
-                                      ),
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.liveGreen,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // Form Fields with 3D Flip/Transition
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 320),
-                            transitionBuilder: (child, animation) {
-                              final rotate =
-                                  Tween<double>(
-                                    begin: math.pi / 2,
-                                    end: 0.0,
-                                  ).animate(
-                                    CurvedAnimation(
-                                      parent: animation,
-                                      curve: Curves.easeOutCubic,
-                                    ),
-                                  );
-                              return AnimatedBuilder(
-                                animation: rotate,
-                                child: child,
-                                builder: (context, child) {
-                                  return Transform(
-                                    transform: Matrix4.identity()
-                                      ..setEntry(3, 2, 0.001)
-                                      ..rotateY(rotate.value),
-                                    alignment: Alignment.center,
-                                    child: child,
-                                  );
-                                },
-                              );
-                            },
-                            child: _buildFormFields(authState, authNotifier),
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Primary NÉORA editorial action
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: authState.isLoading
-                                  ? null
-                                  : _handleAuthSubmit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.brandBlack,
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor: AppColors.brandBlack
-                                    .withValues(alpha: 0.6),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: authState.isLoading
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.2,
-                                        color: AppColors.primary,
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          authState.isForgot
-                                              ? strings.sendResetLinkAction
-                                              : authState.isRegister
-                                              ? strings.createAccountAction
-                                              : strings.loginAction,
-                                          style: const TextStyle(
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 1.0,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Icon(
-                                          Icons.arrow_forward_rounded,
-                                          size: 16,
-                                          color: AppColors.primary,
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ),
-
-                          // Switch link for Forgot mode
-                          if (authState.isForgot) ...[
-                            const SizedBox(height: 14),
-                            TextButton(
-                              onPressed: () =>
-                                  authNotifier.switchTab(AuthTab.login),
-                              child: Text(
-                                strings.backToLoginAction,
+                              )
+                            : Text(
+                                state.isForgot
+                                    ? strings.sendResetLinkAction
+                                    : state.isRegister
+                                    ? 'Tạo tài khoản  →'
+                                    : 'Đăng nhập  →',
                                 style: const TextStyle(
+                                  fontFamily: AppTypography.sansFont,
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primaryBurgundy,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => notifier.switchTab(
+                          state.isRegister || state.isForgot
+                              ? AuthTab.login
+                              : AuthTab.register,
+                        ),
+                        child: Text.rich(
+                          TextSpan(
+                            text: state.isRegister || state.isForgot
+                                ? 'Đã có tài khoản? '
+                                : 'Chưa có tài khoản? ',
+                            style: const TextStyle(
+                              fontFamily: AppTypography.sansFont,
+                              fontSize: 12.5,
+                              color: AppColors.textSecondary,
                             ),
-                          ],
+                            children: [
+                              TextSpan(
+                                text: state.isRegister || state.isForgot
+                                    ? 'Đăng nhập'
+                                    : 'Đăng ký',
+                                style: const TextStyle(
+                                  fontFamily: AppTypography.sansFont,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Bottom Editorial Quote on Login Screen
+                if (!state.isRegister)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 36),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 1,
+                            color: AppColors.divider,
+                          ),
+                          const SizedBox(height: 18),
+                          const Text(
+                            'Ít hơn, đúng chất bạn.',
+                            style: TextStyle(
+                              fontFamily: AppTypography.serifFont,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'MẶC ĐẸP MỖI NGÀY',
+                            style: TextStyle(
+                              fontFamily: AppTypography.sansFont,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.6,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 24),
-
-          // Social Login Divider
-          Row(
-            children: [
-              Expanded(
-                child: Divider(color: AppColors.cardBorder, thickness: 1),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Text(
-                  strings.continueWithLabel,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Divider(color: AppColors.cardBorder, thickness: 1),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          // Social Buttons Row
-          Row(
-            children: [
-              Expanded(
-                child: _buildSocialCard(
-                  iconWidget: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: AppColors.softPeach,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'G',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primaryBurgundy,
-                        ),
-                      ),
-                    ),
-                  ),
-                  label: 'Google',
-                  onTap: _handleAuthSubmit,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildSocialCard(
-                  iconWidget: const Icon(
-                    Icons.apple_rounded,
-                    size: 22,
-                    color: AppColors.textPrimary,
-                  ),
-                  label: 'Apple ID',
-                  onTap: _handleAuthSubmit,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Three NÉORA customer benefits
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.softPeach.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.cardBorder),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _PerkItem(icon: '🚚', text: strings.fastDeliveryPerk),
-                _PerkItem(icon: '🔄', text: strings.returnsPerk),
-                _PerkItem(icon: '👑', text: strings.vipPointsPerk),
               ],
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Guest Continue Link
-          TextButton(
-            onPressed: _continueAsGuest,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  strings.continueAsGuestAction,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 14,
-                  color: AppColors.textSecondary,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 10),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSlidingTabBar(AuthState state, AuthViewModel notifier) {
-    final strings = AppLocalizations.of(context);
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Stack(
-        children: [
-          // Sliding Indicator
-          AnimatedAlign(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOutCubic,
-            alignment: state.isLogin
-                ? Alignment.centerLeft
-                : Alignment.centerRight,
-            child: FractionallySizedBox(
-              widthFactor: 0.5,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF14120E).withValues(alpha: 0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Tab Buttons
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => notifier.switchTab(AuthTab.login),
-                  child: Center(
-                    child: Text(
-                      strings.loginAction,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                        color: state.isLogin
-                            ? AppColors.textPrimary
-                            : AppColors.textMuted,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => notifier.switchTab(AuthTab.register),
-                  child: Center(
-                    child: Text(
-                      strings.registerTab,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                        color: state.isRegister
-                            ? AppColors.textPrimary
-                            : AppColors.textMuted,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -860,8 +458,7 @@ class _AuthContentState extends ConsumerState<AuthContent> {
           _buildFieldLabel(strings.recoveryEmailLabel),
           _buildTextField(
             controller: _emailController,
-            hint: 'email@example.com',
-            icon: Icons.alternate_email_rounded,
+            hint: 'Nhập địa chỉ email của bạn',
             keyboardType: TextInputType.emailAddress,
           ),
         ],
@@ -873,89 +470,91 @@ class _AuthContentState extends ConsumerState<AuthContent> {
         key: const ValueKey('register_form'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildFieldLabel(strings.fullNameLabel),
+          _buildFieldLabel('Họ và tên'),
           _buildTextField(
             controller: _nameController,
-            hint: strings.fullNameHint,
-            icon: Icons.person_outline_rounded,
+            hint: 'NÉORA nên gọi bạn là gì?',
           ),
-          const SizedBox(height: 12),
-          _buildFieldLabel(strings.emailAddressLabel),
+          const SizedBox(height: 16),
+          _buildFieldLabel('Email'),
           _buildTextField(
             controller: _emailController,
-            hint: 'email@example.com',
-            icon: Icons.alternate_email_rounded,
+            hint: 'Nhập địa chỉ email của bạn',
             keyboardType: TextInputType.emailAddress,
           ),
-          const SizedBox(height: 12),
-          _buildFieldLabel(strings.newPasswordLabel),
+          const SizedBox(height: 16),
+          _buildFieldLabel('Mật khẩu'),
           _buildTextField(
             controller: _passwordController,
-            hint: '••••••••',
-            icon: Icons.lock_outline_rounded,
+            hint: 'Tạo mật khẩu của bạn',
             isPassword: true,
             isObscured: !state.isPasswordVisible,
             onToggleVisibility: notifier.togglePasswordVisibility,
           ),
-          const SizedBox(height: 12),
-          _buildFieldLabel(strings.confirmPasswordLabel),
-          _buildTextField(
-            controller: _confirmPasswordController,
-            hint: '••••••••',
-            icon: Icons.shield_outlined,
-            isPassword: true,
-            isObscured: !state.isConfirmPasswordVisible,
-            onToggleVisibility: notifier.toggleConfirmPasswordVisibility,
+          const SizedBox(height: 6),
+          const Text(
+            'Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số.',
+            style: TextStyle(
+              fontFamily: AppTypography.sansFont,
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
           ),
-          const SizedBox(height: 14),
-          // Terms & Agreement checkbox
+          const SizedBox(height: 16),
           GestureDetector(
             onTap: notifier.toggleAgreeToTerms,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   child: Checkbox(
                     value: state.agreeToTerms,
                     onChanged: (_) => notifier.toggleAgreeToTerms(),
                     activeColor: AppColors.primary,
-                    checkColor: AppColors.brandBlack,
+                    checkColor: Colors.white,
+                    side: const BorderSide(
+                      color: AppColors.cardBorder,
+                      width: 1.3,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5),
+                      borderRadius: BorderRadius.circular(3),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Expanded(
+                const Expanded(
                   child: Text.rich(
                     TextSpan(
-                      text: strings.termsPrefix,
-                      style: const TextStyle(
+                      text: 'Tôi đồng ý với ',
+                      style: TextStyle(
+                        fontFamily: AppTypography.sansFont,
                         fontSize: 11.5,
                         color: AppColors.textSecondary,
                         height: 1.4,
                       ),
                       children: [
                         TextSpan(
-                          text: strings.serviceTermsLabel,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
+                          text: 'Điều khoản sử dụng',
+                          style: TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
                             decoration: TextDecoration.underline,
                           ),
                         ),
-                        TextSpan(text: strings.termsConjunction),
+                        TextSpan(text: ' và '),
                         TextSpan(
-                          text: strings.privacyPolicyLabel,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
+                          text: 'Chính sách quyền riêng tư',
+                          style: TextStyle(
+                            fontFamily: AppTypography.sansFont,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
                             decoration: TextDecoration.underline,
                           ),
                         ),
-                        TextSpan(text: strings.termsSuffix),
+                        TextSpan(text: ' của NÉORA.'),
                       ],
                     ),
                   ),
@@ -972,69 +571,37 @@ class _AuthContentState extends ConsumerState<AuthContent> {
       key: const ValueKey('login_form'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(strings.accountOrEmailLabel),
+        _buildFieldLabel('Email'),
         _buildTextField(
           controller: _emailController,
-          hint: 'test@example.com',
-          icon: Icons.alternate_email_rounded,
+          hint: 'Nhập địa chỉ email của bạn',
           keyboardType: TextInputType.emailAddress,
         ),
-        const SizedBox(height: 14),
-        _buildFieldLabel(strings.passwordLabel),
+        const SizedBox(height: 16),
+        _buildFieldLabel('Mật khẩu'),
         _buildTextField(
           controller: _passwordController,
-          hint: '••••••••',
-          icon: Icons.lock_outline_rounded,
+          hint: 'Nhập mật khẩu',
           isPassword: true,
           isObscured: !state.isPasswordVisible,
           onToggleVisibility: notifier.togglePasswordVisibility,
         ),
-        const SizedBox(height: 12),
-        // Remember Me & Forgot Password Row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            GestureDetector(
-              onTap: notifier.toggleRememberMe,
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: Checkbox(
-                      value: state.rememberMe,
-                      onChanged: (_) => notifier.toggleRememberMe(),
-                      activeColor: AppColors.primary,
-                      checkColor: AppColors.brandBlack,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    strings.rememberLoginLabel,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: GestureDetector(
+            onTap: () => notifier.switchTab(AuthTab.forgot),
+            child: const Text(
+              'Quên mật khẩu?',
+              style: TextStyle(
+                fontFamily: AppTypography.sansFont,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+                decoration: TextDecoration.underline,
               ),
             ),
-            GestureDetector(
-              onTap: () => notifier.switchTab(AuthTab.forgot),
-              child: Text(
-                strings.forgotPasswordAction,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryBurgundy,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     );
@@ -1042,12 +609,13 @@ class _AuthContentState extends ConsumerState<AuthContent> {
 
   Widget _buildFieldLabel(String label) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6, left: 2),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         label,
         style: const TextStyle(
+          fontFamily: AppTypography.sansFont,
           fontSize: 12,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
       ),
@@ -1057,7 +625,6 @@ class _AuthContentState extends ConsumerState<AuthContent> {
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
-    required IconData icon,
     bool isPassword = false,
     bool isObscured = false,
     VoidCallback? onToggleVisibility,
@@ -1065,8 +632,8 @@ class _AuthContentState extends ConsumerState<AuthContent> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: AppColors.cardBorder),
       ),
       child: TextField(
@@ -1074,99 +641,58 @@ class _AuthContentState extends ConsumerState<AuthContent> {
         obscureText: isPassword && isObscured,
         keyboardType: keyboardType,
         style: const TextStyle(
-          fontSize: 13.5,
-          fontWeight: FontWeight.w600,
+          fontFamily: AppTypography.sansFont,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
           color: AppColors.textPrimary,
         ),
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, size: 19, color: AppColors.textMuted),
           suffixIcon: isPassword
-              ? IconButton(
-                  icon: Icon(
-                    isObscured
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    size: 19,
-                    color: AppColors.textMuted,
-                  ),
+              ? TextButton(
                   onPressed: onToggleVisibility,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isObscured
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isObscured ? 'Hiện' : 'Ẩn',
+                        style: const TextStyle(
+                          fontFamily: AppTypography.sansFont,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 )
               : null,
           hintText: hint,
-          hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+          hintStyle: const TextStyle(
+            fontFamily: AppTypography.sansFont,
+            fontSize: 12.5,
+            color: AppColors.textMuted,
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
-            vertical: 14,
-            horizontal: 16,
+            vertical: 13,
+            horizontal: 14,
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSocialCard({
-    required Widget iconWidget,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 48,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.cardBorder),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            iconWidget,
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PerkItem extends StatelessWidget {
-  final String icon;
-  final String text;
-
-  const _PerkItem({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 13)),
-        const SizedBox(width: 5),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: AppColors.primaryBurgundy,
-          ),
-        ),
-      ],
     );
   }
 }

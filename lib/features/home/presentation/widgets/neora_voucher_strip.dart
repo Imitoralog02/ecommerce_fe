@@ -31,7 +31,7 @@ class NeoraVoucherStrip extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 17,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                     letterSpacing: -0.2,
                   ),
@@ -96,14 +96,8 @@ class NeoraVoucherStrip extends ConsumerWidget {
         height: cardHeight,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF502814).withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(3),
+          boxShadow: const [],
         ),
         child: Stack(
           clipBehavior: Clip.none,
@@ -146,7 +140,7 @@ class NeoraVoucherStrip extends ConsumerWidget {
                         v.discountValue,
                         style: TextStyle(
                           fontSize: 19,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w600,
                           height: 1.05,
                           color: isMint
                               ? AppColors.liveGreen
@@ -242,7 +236,7 @@ class NeoraVoucherStrip extends ConsumerWidget {
                       backgroundColor: AppColors.brandBlack,
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(3),
                       ),
                       duration: const Duration(seconds: 2),
                     ),
@@ -266,7 +260,7 @@ class NeoraVoucherStrip extends ConsumerWidget {
                     isSaved ? 'Đã lưu' : 'Lưu',
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: isSaved
                           ? Colors.white
                           : (isMint ? Colors.white : const Color(0xFF1A1815)),

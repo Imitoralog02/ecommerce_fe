@@ -33,7 +33,7 @@ class NeoraCategoryHub extends StatelessWidget {
                   'Danh mục',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: -0.3,
                     color: AppColors.textPrimary,
                   ),
@@ -82,7 +82,7 @@ class NeoraCategoryHub extends StatelessWidget {
                         width: 66,
                         height: 66,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(3),
                           border: Border.all(color: Colors.white, width: 3),
                           gradient: isAll
                               ? const LinearGradient(
@@ -97,15 +97,7 @@ class NeoraCategoryHub extends StatelessWidget {
                           color: isAll
                               ? null
                               : (cat['bg'] as Color? ?? Colors.white),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(
-                                0xFF502814,
-                              ).withValues(alpha: 0.12),
-                              blurRadius: 14,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+                          boxShadow: const [],
                         ),
                         child: Center(
                           child: isAll
