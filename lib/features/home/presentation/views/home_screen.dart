@@ -9,9 +9,11 @@ import '../../../product_detail/presentation/views/product_detail_screen.dart';
 import '../../domain/entities/product_entity.dart';
 import '../viewmodels/home_viewmodel.dart';
 import '../widgets/editorial_home_story.dart';
+import '../widgets/home_closing_section.dart';
 import '../widgets/neora_essentials_section.dart';
 import '../../../notifications/presentation/views/notifications_screen.dart';
 import '../../../shop/presentation/views/lookbook_screen.dart';
+import '../../../wallet/presentation/views/voucher_wallet_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   final VoidCallback onOpenCart;
@@ -24,7 +26,14 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final ScrollController _scrollController = ScrollController();
   int _selectedFeedTab = 0;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   List<ProductEntity> _getFilteredProducts(List<ProductEntity> allProducts) {
     switch (_selectedFeedTab) {
@@ -66,9 +75,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _openLookbook() {
+    _openLookbookForOccasion('Đi làm');
+  }
+
+  void _openLookbookForOccasion(String occasion) {
     Navigator.push(
       context,
-      AppRouter.page(builder: (_) => const LookbookScreen()),
+      AppRouter.page(builder: (_) => LookbookScreen(initialOccasion: occasion)),
+    );
+  }
+
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 550),
+      curve: Curves.easeOutCubic,
     );
   }
 
@@ -95,6 +117,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         bottom: false,
         child: CustomScrollView(
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             // 1. NÉORA Top Header: NÉORA | MẶC ĐẸP MỖI NGÀY | Search | Cart | Notifications
@@ -220,7 +243,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: EditorialHomeStory(
                 onDiscover: widget.onOpenSearch,
                 onLookbook: _openLookbook,
-                onOccasionTap: (_) => _openLookbook(),
+                onOccasionTap: _openLookbookForOccasion,
               ),
             ),
 
@@ -245,9 +268,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   );
                 },
                 onQuickAdd: (product) {
-                  ref
-                      .read(cartViewModelProvider.notifier)
-                      .addToCart(product, 'M');
+                  ref.read(cartViewModelProvider.notifier).addToCart(product);
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -264,7 +285,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 110)),
+            SliverToBoxAdapter(
+              child: HomeClosingSection(
+                onOpenWeekendLooks: () => _openLookbookForOccasion('Đi chơi'),
+                onOpenVouchers: () {
+                  Navigator.push(
+                    context,
+                    AppRouter.page(builder: (_) => const VoucherWalletScreen()),
+                  );
+                },
+                onBackToTop: _scrollToTop,
+              ),
+            ),
           ],
         ),
       ),

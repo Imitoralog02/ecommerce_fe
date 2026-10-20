@@ -5,6 +5,7 @@ import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/product_visual_widget.dart';
 import '../../../product_detail/presentation/views/product_detail_screen.dart';
+import '../../../checkout/domain/entities/checkout_selection.dart';
 import '../../../returns/presentation/views/return_request_screen.dart';
 import '../../../reviews/presentation/views/write_review_screen.dart';
 import '../../../support/presentation/views/live_chat_screen.dart';
@@ -69,18 +70,24 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              ref
+              final cancelled = ref
                   .read(orderViewModelProvider.notifier)
                   .cancelOrder(_currentOrder.id);
-              setState(() {
-                _currentOrder = _currentOrder.copyWith(
-                  status: OrderStatus.cancelled,
-                );
-              });
+              if (cancelled) {
+                setState(() {
+                  _currentOrder = _currentOrder.copyWith(
+                    status: OrderStatus.cancelled,
+                  );
+                });
+              }
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('Đã huỷ đơn hàng thành công.'),
+                  content: Text(
+                    cancelled
+                        ? 'Đã huỷ đơn hàng thành công.'
+                        : 'Không thể huỷ đơn hàng ở trạng thái hiện tại.',
+                  ),
                   backgroundColor: AppColors.brandBlack,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
@@ -200,16 +207,16 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
     if (status == OrderStatus.delivered) {
       statusIcon = Icons.task_alt_rounded;
-      statusSubtitle = 'Kiện hàng đã được giao thành công tới bạn.';
+      statusSubtitle = 'Đơn mẫu đã được đánh dấu là đã giao.';
     } else if (status == OrderStatus.shipping) {
       statusIcon = Icons.local_shipping_rounded;
-      statusSubtitle = 'Shipper đang trên đường giao kiện hàng tới bạn.';
+      statusSubtitle = 'Đơn mẫu đang ở trạng thái giao hàng.';
     } else if (status == OrderStatus.processing) {
       statusIcon = Icons.inventory_2_outlined;
-      statusSubtitle = 'NÉORA đang đóng gói cẩn thận trang phục của bạn.';
+      statusSubtitle = 'Đơn mẫu đang được xử lý.';
     } else if (status == OrderStatus.pendingConfirmation) {
       statusIcon = Icons.hourglass_top_rounded;
-      statusSubtitle = 'Đang chờ xác nhận thanh toán & tiếp nhận đơn.';
+      statusSubtitle = 'Đơn mẫu đang chờ xác nhận.';
     } else if (status == OrderStatus.cancelled) {
       statusIcon = Icons.cancel_outlined;
       statusSubtitle = 'Đơn hàng đã được huỷ theo yêu cầu.';
@@ -413,15 +420,21 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.bolt_rounded,
+                Icon(
+                  _currentOrder.shippingType == ShippingType.storePickup
+                      ? Icons.storefront_outlined
+                      : Icons.local_shipping_outlined,
                   size: 16,
                   color: AppColors.coralOrange,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Đơn vị vận chuyển: GHN Express 2h (Mã: ${_currentOrder.trackingNumber ?? "GHN-VN-882194"})',
+                    _currentOrder.trackingNumber == null ||
+                            _currentOrder.shippingType ==
+                                ShippingType.storePickup
+                        ? _currentOrder.shippingType.displayLabel
+                        : '${_currentOrder.shippingType.displayLabel} · Mã vận đơn: ${_currentOrder.trackingNumber}',
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,

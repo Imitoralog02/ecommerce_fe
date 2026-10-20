@@ -89,7 +89,7 @@ class MockWalletRepository implements WalletRepository {
       id: 'v_freeship_299',
       code: 'SHIPFAST25',
       title: 'Freeship hoả tốc nội thành',
-      description: 'Giảm 25.000₫ phí giao hoả tốc 2H',
+      description: 'Giảm 25.000₫ phí giao hỏa tốc',
       discountValue: '25K',
       discountLabel: 'SHIP',
       type: VoucherType.shipping,

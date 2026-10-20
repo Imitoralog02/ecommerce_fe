@@ -108,8 +108,8 @@ class _ReturnRequestScreenState extends ConsumerState<ReturnRequestScreen> {
               const SizedBox(height: 14),
               Text(
                 receipt.draft.solution == ReturnSolution.exchange
-                    ? 'Chuyên viên điều phối của NÉORA sẽ liên hệ trong 2h. Shipper sẽ mang size ${receipt.draft.targetSize} mới đến tận nhà đổi cho bạn trong 24h tới.'
-                    : 'Yêu cầu trả hàng đã được gửi tới Concierge. Sau khi shipper nhận lại kiện hàng, tiền sẽ được hoàn trả tự động.',
+                    ? 'Yêu cầu đổi sang size ${receipt.draft.targetSize} đã được lưu trong bản demo. Chưa có nhân viên hoặc shipper liên hệ thực tế.'
+                    : 'Yêu cầu trả hàng đã được lưu trong bản demo. Chưa có thu hồi hàng hoặc hoàn tiền thực tế.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13,
@@ -249,7 +249,7 @@ class _ReturnRequestScreenState extends ConsumerState<ReturnRequestScreen> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Miễn phí đổi size tận nhà. Shipper giao mẫu mới và nhận lại mẫu cũ cùng lúc.',
+                          'Thử tạo yêu cầu đổi size trong 30 ngày. Bản demo chưa có giao nhận thực tế.',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: Color(0xFF336B50),
@@ -472,7 +472,7 @@ class _ReturnRequestScreenState extends ConsumerState<ReturnRequestScreen> {
                                 Row(
                                   children: [
                                     Text(
-                                      'Đổi size mới tận nhà',
+                                      'Đổi size (demo)',
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w900,
@@ -492,7 +492,7 @@ class _ReturnRequestScreenState extends ConsumerState<ReturnRequestScreen> {
                                 ),
                                 SizedBox(height: 2),
                                 Text(
-                                  'Shipper mang size mới tới tận nơi, bạn thử đồ tại chỗ và gửi lại size cũ hoàn toàn miễn phí.',
+                                  'Lưu lựa chọn size mới để thử luồng đổi hàng; chưa có giao nhận thực tế.',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: AppColors.textSecondary,
@@ -603,7 +603,7 @@ class _ReturnRequestScreenState extends ConsumerState<ReturnRequestScreen> {
                                 ),
                                 SizedBox(height: 2),
                                 Text(
-                                  'Shipper đến nhận lại sản phẩm và hoàn tiền về Ví NÉORA hoặc tài khoản ngân hàng.',
+                                  'Bản demo chỉ lưu lựa chọn hoàn tiền; chưa có thu hồi hàng hoặc chuyển tiền thực tế.',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: AppColors.textSecondary,
@@ -693,7 +693,7 @@ class _ReturnRequestScreenState extends ConsumerState<ReturnRequestScreen> {
             const SizedBox(height: 18),
 
             // 4. Evidence Photos
-            _buildSectionTitle('4. HÌNH ẢNH SẢN PHẨM THỰC TẾ'),
+            _buildSectionTitle('4. ẢNH SẢN PHẨM MẪU'),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -722,20 +722,23 @@ class _ReturnRequestScreenState extends ConsumerState<ReturnRequestScreen> {
                         ),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: viewModel.pickEvidencePhoto,
-                      child: Container(
-                        width: 74,
-                        height: 74,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF7F4EF),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.cardBorder),
-                        ),
-                        child: const Icon(
-                          Icons.add_a_photo_outlined,
-                          size: 22,
-                          color: AppColors.textMuted,
+                    Tooltip(
+                      message: 'Thêm ảnh minh họa từ bộ sưu tập mẫu',
+                      child: GestureDetector(
+                        onTap: viewModel.pickEvidencePhoto,
+                        child: Container(
+                          width: 74,
+                          height: 74,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7F4EF),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: const Icon(
+                            Icons.add_a_photo_outlined,
+                            size: 22,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                     ),
@@ -753,8 +756,7 @@ class _ReturnRequestScreenState extends ConsumerState<ReturnRequestScreen> {
               maxLines: 3,
               style: const TextStyle(fontSize: 13, color: AppColors.brandBlack),
               decoration: InputDecoration(
-                hintText:
-                    'Nhập thời gian shipper có thể ghé thuận tiện nhất hoặc lưu ý đặc biệt...',
+                hintText: 'Ghi chú thêm cho yêu cầu đổi trả mẫu...',
                 hintStyle: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textMuted,

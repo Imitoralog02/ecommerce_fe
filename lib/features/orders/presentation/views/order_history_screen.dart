@@ -146,11 +146,17 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen>
           ),
           ElevatedButton(
             onPressed: () {
-              ref.read(orderViewModelProvider.notifier).cancelOrder(order.id);
+              final cancelled = ref
+                  .read(orderViewModelProvider.notifier)
+                  .cancelOrder(order.id);
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Đã huỷ đơn hàng #${order.id}'),
+                  content: Text(
+                    cancelled
+                        ? 'Đã huỷ đơn hàng #${order.id}'
+                        : 'Không thể huỷ đơn hàng ở trạng thái hiện tại.',
+                  ),
                   backgroundColor: AppColors.saleRed,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(

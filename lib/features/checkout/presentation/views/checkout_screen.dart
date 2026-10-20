@@ -37,8 +37,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   void _processPayment() async {
     final strings = AppLocalizations.of(context);
-    final checkout = ref.read(checkoutViewModelProvider);
-
     final notifier = ref.read(checkoutViewModelProvider.notifier);
     final order = await notifier.placeOrder();
     if (!mounted) return;
@@ -60,9 +58,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         builder: (_) => OrderConfirmedScreen(
           orderId: order.id,
           paymentMethod: order.paymentMethod,
-          estimatedDelivery: checkout.shippingType == ShippingType.express
-              ? strings.deliveryTomorrowAtTwo
-              : strings.deliveryNextTwoToThreeDays,
+          estimatedDelivery:
+              order.estimatedDelivery ??
+              order.shippingType.demoEstimatedDelivery,
           totalAmount: CurrencyFormatter.vnd(order.totalAmount),
         ),
       ),
@@ -152,7 +150,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           children: [
             const EditorialHeading(
               title: 'Sắp đến tay bạn.',
-              subtitle: 'Thông tin của bạn luôn được bảo mật',
+              subtitle: 'Đặt đơn mẫu, chưa phát sinh thanh toán',
               padding: EdgeInsets.fromLTRB(0, 8, 0, 20),
             ),
 
@@ -272,7 +270,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               isSelected: checkoutState.shippingType == ShippingType.standard,
               onTap: () => checkoutNotifier.setShipping(ShippingType.standard),
               title: 'Giao tiêu chuẩn',
-              subtitle: 'Nhận hàng dự kiến 20–22/10',
+              subtitle: ShippingType.standard.demoEstimatedDelivery,
               trailing: strings.freeLabel,
               isPositiveTrailing: true,
             ),
@@ -280,8 +278,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             _buildOptionTile(
               isSelected: checkoutState.shippingType == ShippingType.express,
               onTap: () => checkoutNotifier.setShipping(ShippingType.express),
-              title: 'Giao nhanh',
-              subtitle: 'Nhận hàng trong 24 giờ',
+              title: 'Giao hỏa tốc',
+              subtitle: ShippingType.express.demoEstimatedDelivery,
               trailing: CurrencyFormatter.vnd(30000),
             ),
             const SizedBox(height: 22),
@@ -324,7 +322,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               onTap: () =>
                   checkoutNotifier.setPayment(PaymentType.cashOnDelivery),
               title: 'Trả tiền khi nhận hàng',
-              subtitle: 'Kiểm tra hàng trước khi thanh toán',
+              subtitle: 'Lựa chọn COD cho đơn hàng mẫu',
             ),
             const SizedBox(height: 8),
             _buildOptionTile(
@@ -345,7 +343,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   : null,
               title: 'MoMo',
               subtitle: paymentMethods.momoLinked
-                  ? 'Thanh toán nhanh qua ứng dụng MoMo'
+                  ? 'Ví MoMo mẫu cho checkout demo'
                   : strings.paymentUnavailableLabel,
             ),
             const SizedBox(height: 8),

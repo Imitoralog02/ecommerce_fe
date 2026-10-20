@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../address/presentation/viewmodels/address_viewmodel.dart';
 import '../../../address/presentation/views/address_book_screen.dart';
 import '../../../auth/presentation/views/auth_screen.dart';
+import '../../../auth/presentation/viewmodels/auth_viewmodel.dart';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
 import '../../../cart/presentation/views/cart_screen.dart';
 import '../../../history/presentation/views/recently_viewed_screen.dart';
@@ -45,14 +46,18 @@ class ProfileScreen extends ConsumerWidget {
     final profile = userSettings.profile;
 
     // Real dynamic order counts (with natural fallbacks if demo store is fresh)
-    final pendingCount =
-        orderState.getOrdersByStatus(OrderStatus.pendingConfirmation).length;
-    final processingCount =
-        orderState.getOrdersByStatus(OrderStatus.processing).length;
-    final shippingCount =
-        orderState.getOrdersByStatus(OrderStatus.shipping).length;
-    final deliveredCount =
-        orderState.getOrdersByStatus(OrderStatus.delivered).length;
+    final pendingCount = orderState
+        .getOrdersByStatus(OrderStatus.pendingConfirmation)
+        .length;
+    final processingCount = orderState
+        .getOrdersByStatus(OrderStatus.processing)
+        .length;
+    final shippingCount = orderState
+        .getOrdersByStatus(OrderStatus.shipping)
+        .length;
+    final deliveredCount = orderState
+        .getOrdersByStatus(OrderStatus.delivered)
+        .length;
 
     // Active order tracking preview (if any order is currently in transit)
     final shippingOrders = orderState.getOrdersByStatus(OrderStatus.shipping);
@@ -419,8 +424,8 @@ class ProfileScreen extends ConsumerWidget {
                     const Divider(height: 1, color: AppColors.divider),
                     _buildMenuRow(
                       icon: Icons.support_agent_outlined,
-                      title: 'Hỗ trợ từ NÉORA Concierge',
-                      subtitle: 'Hotline miễn cước: 1800 6868 (24/7)',
+                      title: 'Trung tâm trợ giúp NÉORA',
+                      subtitle: 'Câu hỏi thường gặp và chat tư vấn mẫu',
                       onTap: () => Navigator.push(
                         context,
                         AppRouter.page(
@@ -432,7 +437,7 @@ class ProfileScreen extends ConsumerWidget {
                     _buildMenuRow(
                       icon: Icons.verified_user_outlined,
                       title: 'Chính sách bảo mật & Đổi trả 30 ngày',
-                      subtitle: 'Cam kết chất liệu & Dịch vụ chuẩn Atelier',
+                      subtitle: 'Thông tin chính sách trong bản demo',
                       onTap: () => Navigator.push(
                         context,
                         AppRouter.page(
@@ -445,7 +450,7 @@ class ProfileScreen extends ConsumerWidget {
                       icon: Icons.logout_rounded,
                       title: 'Đăng xuất tài khoản',
                       isDestructive: true,
-                      onTap: () => _confirmLogout(context),
+                      onTap: () => _confirmLogout(context, ref),
                     ),
                   ],
                 ),
@@ -505,10 +510,7 @@ class ProfileScreen extends ConsumerWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF262422),
-            Color(0xFF141312),
-          ],
+          colors: [Color(0xFF262422), Color(0xFF141312)],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
@@ -707,9 +709,9 @@ class ProfileScreen extends ConsumerWidget {
             spacing: 8,
             runSpacing: 6,
             children: const [
-              _VipPerkTag(label: 'Freeship mọi đơn'),
-              _VipPerkTag(label: 'Đổi trả 30 ngày tại nhà'),
-              _VipPerkTag(label: 'Stylist 1-1 riêng'),
+              _VipPerkTag(label: 'Ưu đãi giao hàng mẫu'),
+              _VipPerkTag(label: 'Yêu cầu đổi trả mẫu'),
+              _VipPerkTag(label: 'Stylist tự động'),
             ],
           ),
         ],
@@ -926,9 +928,7 @@ class ProfileScreen extends ConsumerWidget {
       onTap: () {
         Navigator.push(
           context,
-          AppRouter.page(
-            builder: (_) => OrderTrackingScreen(orderId: orderId),
-          ),
+          AppRouter.page(builder: (_) => OrderTrackingScreen(orderId: orderId)),
         );
       },
       borderRadius: BorderRadius.circular(8),
@@ -1175,8 +1175,8 @@ class ProfileScreen extends ConsumerWidget {
             Expanded(
               child: _buildServiceCard(
                 icon: Icons.sync_alt_rounded,
-                title: 'Đổi trả tận nơi',
-                subtitle: '30 ngày miễn phí',
+                title: 'Đổi trả mẫu',
+                subtitle: 'Xem chính sách 30 ngày',
                 onTap: () {
                   Navigator.push(
                     context,
@@ -1232,14 +1232,10 @@ class ProfileScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: highlight
-              ? const Color(0xFFFBF4EB)
-              : Colors.white,
+          color: highlight ? const Color(0xFFFBF4EB) : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: highlight
-                ? const Color(0xFFD4AF37)
-                : AppColors.cardBorder,
+            color: highlight ? const Color(0xFFD4AF37) : AppColors.cardBorder,
           ),
         ),
         child: Column(
@@ -1380,7 +1376,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmLogout(BuildContext context) {
+  void _confirmLogout(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -1436,6 +1432,7 @@ class ProfileScreen extends ConsumerWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          ref.read(authViewModelProvider.notifier).logout();
                           Navigator.pop(bottomSheetContext);
                           Navigator.pushAndRemoveUntil(
                             context,

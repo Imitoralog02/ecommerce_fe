@@ -46,8 +46,8 @@ class _EditorialHomeStoryState extends State<EditorialHomeStory> {
       title: 'Ít hơn,\nđúng chất bạn.',
       subtitle: 'Những món cơ bản. Vô vàn cách mặc.',
       cta: 'Khám phá bộ sưu tập  →',
-      image: 'assets/images/real/banner_summer.jpg',
-      alignment: Alignment(0.55, -0.1),
+      image: 'assets/images/real/splash_1_couple.jpg',
+      alignment: Alignment.center,
     ),
     _HeroSlideData(
       badge: 'NÉORA MENSWEAR • MỚI',
@@ -450,7 +450,7 @@ class _EditorialHomeStoryState extends State<EditorialHomeStory> {
                 children: [
                   Expanded(
                     child: _buildStoryCard(
-                      image: 'assets/images/real/p_dress.jpg',
+                      image: 'assets/images/real/splash_2_work.jpg',
                       alignment: const Alignment(0.0, -0.2),
                       title: 'Nữ',
                       subtitle: 'Mềm mại có gu',
@@ -618,7 +618,11 @@ class _EditorialHomeStoryState extends State<EditorialHomeStory> {
             borderRadius: BorderRadius.circular(6),
             child: AspectRatio(
               aspectRatio: 0.76,
-              child: Image.asset(image, fit: BoxFit.cover, alignment: alignment),
+              child: Image.asset(
+                image,
+                fit: BoxFit.cover,
+                alignment: alignment,
+              ),
             ),
           ),
           const SizedBox(height: 8),

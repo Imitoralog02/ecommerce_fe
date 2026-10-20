@@ -218,7 +218,7 @@ class RecentlyViewedScreen extends ConsumerWidget {
                             onQuickAdd: () {
                               ref
                                   .read(cartViewModelProvider.notifier)
-                                  .addToCart(product, 'M');
+                                  .addToCart(product);
                               ScaffoldMessenger.of(
                                 context,
                               ).hideCurrentSnackBar();

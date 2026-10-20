@@ -1,18 +1,42 @@
+import '../../../../data/local/demo_entity_codec.dart';
+import '../../../../data/local/demo_preferences_store.dart';
 import '../../../home/domain/entities/product_entity.dart';
 import '../../domain/entities/support_message_entity.dart';
 import '../../domain/repositories/support_repository.dart';
 
 class MockSupportRepository implements SupportRepository {
-  const MockSupportRepository();
+  const MockSupportRepository([this._store]);
+
+  static const _key = 'demo_support_messages_v1';
+  final DemoPreferencesStore? _store;
 
   @override
   List<SupportMessageEntity> initialMessages() {
+    final saved = _store?.read(_key);
+    if (saved is List) {
+      try {
+        return saved.map((raw) {
+          final value = Map<String, dynamic>.from(raw as Map);
+          return SupportMessageEntity(
+            id: value['id'] as String,
+            text: value['text'] as String,
+            timestamp: DateTime.parse(value['timestamp'] as String),
+            isUser: value['isUser'] as bool,
+            attachedProduct: value['attachedProduct'] == null
+                ? null
+                : DemoEntityCodec.productFromJson(value['attachedProduct']),
+            attachedOrderId: value['attachedOrderId'] as String?,
+          );
+        }).toList();
+      } catch (_) {
+        // Ignore an invalid local demo snapshot.
+      }
+    }
     final now = DateTime.now();
     return [
       SupportMessageEntity(
         id: 'welcome_1',
-        text:
-            'Xin chào bạn! Mình là Linh Chi — Senior Stylist tại NÉORA Concierge ✨',
+        text: 'Xin chào bạn! Mình là Linh Chi — trợ lý tư vấn mẫu của NÉORA ✨',
         timestamp: now.subtract(const Duration(minutes: 5)),
         isUser: false,
       ),
@@ -24,6 +48,27 @@ class MockSupportRepository implements SupportRepository {
         isUser: false,
       ),
     ];
+  }
+
+  @override
+  void saveMessages(List<SupportMessageEntity> messages) {
+    _store?.write(
+      _key,
+      messages
+          .map(
+            (value) => {
+              'id': value.id,
+              'text': value.text,
+              'timestamp': value.timestamp.toIso8601String(),
+              'isUser': value.isUser,
+              'attachedProduct': value.attachedProduct == null
+                  ? null
+                  : DemoEntityCodec.productToJson(value.attachedProduct!),
+              'attachedOrderId': value.attachedOrderId,
+            },
+          )
+          .toList(),
+    );
   }
 
   @override
@@ -47,10 +92,10 @@ class MockSupportRepository implements SupportRepository {
       return 'Với phom dáng may đo NÉORA, bạn cho Chi xin thêm số đo chiều cao và cân nặng để Chi chọn size vừa vặn tôn dáng nhất cho bạn nhé!';
     }
     if (_containsAny(cleanText, ['đơn', 'ship', 'giao', 'vận chuyển'])) {
-      return 'Đơn hàng được NÉORA đóng gói hộp quà thơm sang trọng và giao tận tay. Bạn có thể tra cứu hành trình trực tiếp trong mục "Theo dõi đơn hàng" ạ 🚚';
+      return 'Bạn có thể xem trạng thái và phương thức giao của đơn mẫu trong mục "Theo dõi đơn hàng". Bản demo chưa có vận chuyển thực tế ạ 🚚';
     }
     if (_containsAny(cleanText, ['đổi', 'trả', 'lỗi', 'hoàn'])) {
-      return 'NÉORA hỗ trợ đổi trả miễn phí trong 30 ngày tận nhà. Bạn chỉ cần giữ nguyên tem mác là shipper sẽ mang đồ mới đến đổi ngay ạ 🔄';
+      return 'Chính sách hiển thị trong bản demo là đổi trả trong 30 ngày. Bạn có thể tạo yêu cầu mẫu trong chi tiết đơn; chưa có shipper hoặc hoàn tiền thực tế ạ 🔄';
     }
     if (_containsAny(cleanText, ['voucher', 'giảm', 'mã', 'xu'])) {
       return 'Bạn nhớ kiểm tra "Ví Voucher" để áp dụng các mã freeship và giảm giá độc quyền nhé. Đừng quên điểm danh hàng ngày nhận +50 xu nha 🎁';

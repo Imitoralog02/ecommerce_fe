@@ -267,6 +267,59 @@ class WalletViewModel extends Notifier<WalletState> {
     );
   }
 
+  void reverseOrderVoucher(String orderId, String? code, int coinReward) {
+    if (code == null) return;
+    final reversalId = 'voucher_reversal_$orderId';
+    if (state.transactions.any((item) => item.id == reversalId)) return;
+    final usedVoucher = state.vouchers.any(
+      (item) => item.code == code && item.isUsed,
+    );
+    if (!usedVoucher) return;
+    final vouchers = state.vouchers
+        .map((item) => item.code == code ? item.copyWith(isUsed: false) : item)
+        .toList();
+    final rewardWasGranted = state.transactions.any(
+      (item) => item.id == 'voucher_reward_$orderId',
+    );
+    final coinsToReverse = rewardWasGranted ? coinReward : 0;
+    final transactions = [
+      WalletTransactionEntity(
+        id: reversalId,
+        title: 'Hoàn voucher do huỷ đơn hàng #$orderId',
+        coinDelta: -coinsToReverse,
+        date: 'Vừa xong',
+        icon: '↩️',
+      ),
+      ...state.transactions,
+    ];
+    final earnedInDemo = transactions
+        .where(
+          (item) =>
+              item.id.startsWith('daily_checkin_') ||
+              item.id.startsWith('review_reward_') ||
+              item.id.startsWith('voucher_reward_') ||
+              item.id.startsWith('voucher_reversal_'),
+        )
+        .fold<int>(0, (sum, item) => sum + item.coinDelta);
+    final remainingToDiamond = (520 - earnedInDemo).clamp(0, 9999).toInt();
+    _save(
+      state.copyWith(
+        vouchers: vouchers,
+        coinBalance: (state.coinBalance - coinsToReverse)
+            .clamp(0, 1 << 31)
+            .toInt(),
+        coinsToNextTier: remainingToDiamond,
+        memberTier: remainingToDiamond == 0
+            ? 'Thành viên Kim Cương'
+            : 'Thành viên Vàng',
+        tierProgress: remainingToDiamond == 0
+            ? 1
+            : (0.72 + earnedInDemo / (520 / 0.28)).clamp(0.0, 1.0),
+        transactions: transactions,
+      ),
+    );
+  }
+
   void toggleSaveVoucher(String voucherId) {
     final vouchers = state.vouchers.map((voucher) {
       if (voucher.id != voucherId) return voucher;

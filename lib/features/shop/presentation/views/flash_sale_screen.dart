@@ -544,7 +544,7 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                             onPressed: () {
                               ref
                                   .read(cartViewModelProvider.notifier)
-                                  .addToCart(product, 'M');
+                                  .addToCart(product);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(

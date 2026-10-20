@@ -38,25 +38,25 @@ class ChatViewModel extends Notifier<ChatState> {
       prompt:
           'Bạn có thể tư vấn chọn size chuẩn theo vóc dáng giúp tôi được không?',
       reply:
-          'Dạ chào bạn! Các thiết kế NÉORA được cắt rập theo tỷ lệ người Việt. Bạn cho Chi xin chiều cao, cân nặng để Chi gợi ý chuẩn size tôn dáng nhất cho bạn nhé ✨',
+          'Dạ chào bạn! Đây là phần tư vấn size mẫu. Bạn có thể xem bảng size tại trang sản phẩm để đối chiếu số đo trước khi chọn nhé ✨',
     ),
     const QuickPromptTopic(
       title: '🚚 Thời gian giao hàng',
       prompt: 'Thời gian giao hàng tiêu chuẩn mất bao lâu và phí ship thế nào?',
       reply:
-          'NÉORA hỗ trợ giao hỏa tốc 2h tại TP.HCM & Hà Nội. Toàn quốc giao từ 2-3 ngày làm việc. Đơn từ 300K luôn được miễn phí vận chuyển toàn quốc ạ! 📦',
+          'Trong bản demo, giao tiêu chuẩn dự kiến 2–3 ngày làm việc. Bạn xem thời gian và phí của phương thức đã chọn ngay tại checkout nhé 📦',
     ),
     const QuickPromptTopic(
       title: '🔄 Chính sách đổi trả 30 ngày',
       prompt: 'Tôi muốn tìm hiểu chính sách đổi trả hàng nếu mặc không vừa?',
       reply:
-          'Bạn hoàn toàn an tâm nhé! NÉORA hỗ trợ đổi size, đổi mẫu miễn phí tận nhà trong 30 ngày, shipper sẽ mang hàng mới đến đổi và lấy hàng cũ về rất tiện lợi ạ 🌿',
+          'Chính sách hiển thị trong bản demo là đổi trả trong 30 ngày. Bạn có thể tạo yêu cầu mẫu từ chi tiết đơn, nhưng chưa có xử lý đổi hàng thực tế ạ 🌿',
     ),
     const QuickPromptTopic(
       title: '🎁 Mã voucher hôm nay',
       prompt: 'Hôm nay NÉORA có voucher hoặc ưu đãi gì đặc biệt không?',
       reply:
-          'Hiện bạn đang có mã GIAM30K cho đơn từ 299K và Freeship toàn quốc trong Ví Voucher. Đặc biệt điểm danh hôm nay bạn còn nhận thêm +50 xu NÉORA nữa đó ạ! ✨',
+          'Bạn hãy kiểm tra các voucher mẫu đang có trong Ví NÉORA. Điều kiện và mức giảm của từng mã được tính ngay trong giỏ hàng demo ạ ✨',
     ),
   ];
 
@@ -86,6 +86,7 @@ class ChatViewModel extends Notifier<ChatState> {
       messages: [...state.messages, productBubble],
       isStylistTyping: true,
     );
+    _saveMessages();
 
     final replyText = await ref
         .read(supportRepositoryProvider)
@@ -109,6 +110,7 @@ class ChatViewModel extends Notifier<ChatState> {
       messages: [...state.messages, userMsg],
       isStylistTyping: true,
     );
+    _saveMessages();
 
     final replyText = await ref
         .read(supportRepositoryProvider)
@@ -130,6 +132,7 @@ class ChatViewModel extends Notifier<ChatState> {
       messages: [...state.messages, userMsg],
       isStylistTyping: true,
     );
+    _saveMessages();
 
     final replyText = await ref
         .read(supportRepositoryProvider)
@@ -149,7 +152,11 @@ class ChatViewModel extends Notifier<ChatState> {
       messages: [...state.messages, reply],
       isStylistTyping: false,
     );
+    _saveMessages();
   }
+
+  void _saveMessages() =>
+      ref.read(supportRepositoryProvider).saveMessages(state.messages);
 }
 
 final chatViewModelProvider = NotifierProvider<ChatViewModel, ChatState>(() {

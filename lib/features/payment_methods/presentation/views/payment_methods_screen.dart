@@ -619,7 +619,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Kiểm tra và thử trang phục tại nhà trước khi trả tiền cho shipper.',
+                          'Hình thức COD mẫu để thử checkout; chưa có giao hàng hoặc thu tiền.',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: AppColors.textMuted,

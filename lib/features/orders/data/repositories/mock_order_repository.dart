@@ -2,6 +2,7 @@ import '../../../address/domain/entities/address_entity.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
 import '../../../home/domain/entities/product_entity.dart';
 import '../../domain/entities/order_entity.dart';
+import '../../../checkout/domain/entities/checkout_selection.dart';
 import '../../domain/repositories/order_repository.dart';
 
 class MockOrderRepository implements OrderRepository {
@@ -84,6 +85,7 @@ class MockOrderRepository implements OrderRepository {
         trackingNumber: 'SPX-8931238472VN',
         estimatedDelivery: '16:30 hôm nay',
         paymentMethod: 'Ví NÉORA Pay',
+        shippingType: ShippingType.express,
       ),
       OrderEntity(
         id: 'NEO-5102',
@@ -93,7 +95,7 @@ class MockOrderRepository implements OrderRepository {
           CartItemEntity(
             product: product('prod_sneaker_white'),
             selectedSize: '38',
-            selectedColor: 'Trắng',
+            selectedColor: 'Trắng Kem',
             quantity: 1,
           ),
         ],
@@ -110,7 +112,7 @@ class MockOrderRepository implements OrderRepository {
           CartItemEntity(
             product: product('prod_hoodie_lavender'),
             selectedSize: 'L',
-            selectedColor: 'Lavender',
+            selectedColor: 'Be Cát',
             quantity: 2,
           ),
         ],
@@ -128,7 +130,7 @@ class MockOrderRepository implements OrderRepository {
           CartItemEntity(
             product: product('prod_leather_bag'),
             selectedSize: 'Free size',
-            selectedColor: 'Nâu Bò',
+            selectedColor: 'Nâu Da Bò',
             quantity: 1,
           ),
         ],
@@ -147,7 +149,7 @@ class MockOrderRepository implements OrderRepository {
           CartItemEntity(
             product: product('prod_linen_shirt'),
             selectedSize: 'M',
-            selectedColor: 'Trắng Basic',
+            selectedColor: 'Trắng Ngà',
             quantity: 1,
           ),
         ],

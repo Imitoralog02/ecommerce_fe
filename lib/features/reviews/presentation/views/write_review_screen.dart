@@ -38,7 +38,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
     'Đường may sắc sảo 🧵',
     'Chuẩn phom tôn dáng 👗',
     'Màu đẹp hơn ảnh 📸',
-    'Giao hàng 2h siêu tốc 🚀',
+    'Đóng gói cẩn thận 📦',
     'Đóng gói NÉORA sang trọng 🎁',
   ];
 
@@ -318,7 +318,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Đánh giá kèm hình ảnh thực tế để tích xu mua sắm cho đơn hàng tiếp theo.',
+                          'Đánh giá và ảnh minh họa trong bản demo giúp bạn thử luồng tích xu mẫu.',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: AppColors.textSecondary,
@@ -722,7 +722,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
                           Text('📸', style: TextStyle(fontSize: 15)),
                           SizedBox(width: 8),
                           Text(
-                            'Hình ảnh thực tế',
+                            'Ảnh minh họa sản phẩm',
                             style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,
@@ -825,7 +825,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  'Thêm ảnh',
+                                  'Ảnh mẫu',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,

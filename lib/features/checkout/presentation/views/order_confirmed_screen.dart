@@ -18,10 +18,10 @@ class OrderConfirmedScreen extends ConsumerStatefulWidget {
 
   const OrderConfirmedScreen({
     super.key,
-    this.orderId = 'NEO-2094',
-    this.paymentMethod = 'Apple Pay',
-    this.estimatedDelivery = '2-3 ngày tới',
-    this.totalAmount = '2.136.000₫',
+    required this.orderId,
+    required this.paymentMethod,
+    required this.estimatedDelivery,
+    required this.totalAmount,
   });
 
   @override

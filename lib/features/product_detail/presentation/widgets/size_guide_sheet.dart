@@ -415,7 +415,7 @@ class _SizeGuideSheetState extends State<SizeGuideSheet>
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Cam kết đổi size tận nhà trong 30 ngày hoàn toàn miễn phí',
+                  'Bản demo: thử gửi yêu cầu đổi size trong 30 ngày',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,

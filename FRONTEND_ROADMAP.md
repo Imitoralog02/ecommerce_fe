@@ -1,6 +1,6 @@
 # Lộ trình hoàn thiện frontend NÉORA
 
-Cập nhật: 19/10/2026. Dự án chưa có backend; các đơn hàng, đăng nhập và thanh toán hiện là luồng mock data. Kiến trúc hiện dùng `domain` / `data` / `presentation`, ViewModel với Riverpod và repository qua provider.
+Cập nhật: 21/10/2026. Dự án chưa có backend; các đơn hàng, đăng nhập và thanh toán hiện là luồng mock data. Kiến trúc hiện dùng `domain` / `data` / `presentation`, ViewModel với Riverpod và repository qua provider.
 
 ## Đã hoàn thành trong đợt này
 
@@ -20,20 +20,30 @@ Cập nhật: 19/10/2026. Dự án chưa có backend; các đơn hàng, đăng n
 - [x] Xu thưởng cập nhật tiến trình hội viên; khi đạt ngưỡng mẫu, hạng Kim Cương và voucher tương ứng có thể sử dụng.
 - [x] Điểm danh nhận 50 xu một lần mỗi ngày địa phương; tự mở lại khi qua nửa đêm hoặc quay lại ứng dụng, giữ trạng thái qua khởi động lại và chuyển dữ liệu cờ cũ sang ngày điểm danh.
 - [x] Flash sale dùng bốn khung giờ mỗi ngày và suất mẫu theo sản phẩm; đồng hồ tính từ mốc giờ thật, không khởi động lại khi mở màn. Trang chủ và trang flash sale chia sẻ giá, mức giảm và trạng thái suất. Bỏ mã FLASH50, nút nhắc nhở và chia sẻ chưa có hành vi thật.
-- [x] Kiểm tra `dart analyze lib test` và 58 Flutter test.
+- [x] Đồng bộ phương thức giao hàng, trạng thái hủy, voucher/xu giữa checkout, đơn hàng và theo dõi; không hiển thị mã vận đơn giả cho đơn chưa có mã.
+- [x] Dữ liệu đánh giá mẫu theo đúng sản phẩm; số đánh giá mới, ảnh minh họa và tìm kiếm ảnh mẫu phản ánh sản phẩm được chọn.
+- [x] Lưu đánh giá, yêu cầu đổi trả, thông báo đã đọc, lịch sử xem/tìm kiếm, chat và phương thức thanh toán mẫu qua `shared_preferences`.
+- [x] Thống nhất chính sách đổi trả 30 ngày và nội dung giao hàng trên các màn chính; kết quả đổi trả và chat nêu rõ giới hạn demo.
+- [x] Bỏ số hotline và thao tác gọi giả; sửa các lời hứa về giao nhận, đồng kiểm, bảo mật thẻ và phản hồi nhân viên trên màn trợ giúp, hồ sơ, checkout, thông báo, đánh giá và đổi trả.
+- [x] Đối chiếu các khung đầu của Figma: thay ảnh hero Home bằng ảnh cặp đôi và ảnh phối đồ Stylist bằng ảnh nguyên set công sở có sẵn. Giữ nguyên thương hiệu NÉORA.
+- [x] Hoàn thiện phần cuối Home bằng thẻ cảm hứng đi chơi, lối vào ví ưu đãi mẫu và nút trở về đầu trang; các lối mở đúng màn hiện có và phần dưới được kiểm tra ở màn 360/390 px cùng cỡ chữ 150%.
+- [x] Thêm chế độ mô phỏng mất kết nối trong Cài đặt, chỉ tồn tại trong phiên chạy; có đường thoát rõ ràng, nút thử lại phản ánh đúng trạng thái demo và bố cục cuộn được ở màn 360 px/cỡ chữ 150%. Chặn cập nhật Home sau khi provider đã bị hủy.
+- [x] Kiểm tra `flutter analyze --no-pub` và bộ Flutter test hiện tại.
 
 ## Việc tiếp theo, theo thứ tự ưu tiên
 
 ### 1. Dữ liệu cục bộ và tính nhất quán của demo
 
-- [ ] Rà các hành động còn mô phỏng như xu ngoài voucher, theo dõi đơn, đổi trả và chat; hoàn thiện hành vi mock nhất quán hoặc ghi rõ không khả dụng.
-- [ ] Lưu các thay đổi mock còn mất khi khởi động lại: đánh giá, đổi trả, thông báo, sản phẩm đã xem và lịch sử chat theo phạm vi sử dụng mong muốn. Thẻ thanh toán mẫu hiện chỉ tồn tại trong phiên và phải tiếp tục được ghi rõ như vậy.
-- [ ] Làm rõ chế độ giả lập offline và chọn ảnh: kiểm tra kết nối hiện luôn trả `true`, chọn ảnh luôn trả asset mẫu. Cung cấp cách thử các trạng thái này trong demo hoặc ghi rõ ở UI.
+- [ ] Rà tiếp toàn bộ nội dung tĩnh và dữ liệu mẫu, kể cả các màn chưa đối chiếu trực quan, để chúng không bị hiểu là giao dịch, nhân viên hay vận chuyển thật.
+- [x] Làm rõ chế độ giả lập offline: bật/tắt trong Cài đặt để thử màn mất kết nối; repository trả theo trạng thái mô phỏng. Chưa kiểm tra mạng thật.
+- [ ] Bộ chọn ảnh hiện chỉ trả ảnh asset mẫu; đã gắn nhãn ảnh minh họa và khớp với sản phẩm, nhưng chưa thể chọn ảnh từ thiết bị.
 - [ ] Quyết định phạm vi dữ liệu cá nhân được lưu cục bộ và cách bảo vệ/xoá dữ liệu demo trước khi dùng thông tin thật. Các repository cục bộ hiện chỉ phục vụ bản demo.
+- [ ] Thiết kế giao dịch nguyên tử cho luồng đặt đơn–ví–giỏ khi chuyển sang backend; `shared_preferences` hiện lưu từng phần riêng.
 
 ### 2. Chất lượng UI và kiến trúc
 
 - [ ] Đưa chuỗi hiển thị còn hardcode vào ARB và hoàn thiện tiếng Việt/Anh trên 28 màn hình. Hiện 9 màn hình gọi `AppLocalizations` trực tiếp.
+- [ ] Đối chiếu trực quan từng màn với Figma trên thiết bị thật, đặc biệt màn nhỏ, bàn phím và cỡ chữ lớn. Các khung đầu đã được đối chiếu trên trình duyệt; ảnh sản phẩm, giá và thứ tự catalog vẫn khác bản thiết kế, cần bộ asset/dữ liệu thiết kế trước khi chốt pixel-level.
 - [ ] Chuẩn hoá trạng thái loading, rỗng, lỗi và retry cho từng feature; bổ sung trạng thái offline dựa trên kết nối thật khi có tích hợp mạng.
 - [ ] Giảm nghiệp vụ còn nằm trong widget, đưa validation và chuyển trạng thái vào use case/ViewModel; giữ `domain` độc lập với Flutter.
 - [ ] Rà lại route, tham số điều hướng và hành vi back/deep link cho các luồng mua hàng và tài khoản.
@@ -43,7 +53,7 @@ Cập nhật: 19/10/2026. Dự án chưa có backend; các đơn hàng, đăng n
 
 - [ ] Thêm widget/integration test cho hành trình từ sản phẩm → giỏ → địa chỉ → đặt đơn mẫu → lịch sử đơn, cùng các nhánh thất bại. Đã có test repository/ViewModel cho việc khôi phục sau khởi động lại.
 - [ ] Kiểm thử trường hợp dữ liệu cục bộ hỏng/phiên bản cũ, voucher hết điều kiện, bấm đặt hàng nhiều lần, điều hướng back và xoay màn hình.
-- [ ] Thiết lập CI chạy format, analyze, test và build kiểm tra.
+- [x] Thiết lập CI chạy format, analyze, test và build APK debug bằng Flutter 3.44.0; đã kiểm tra các lệnh tương ứng trên máy phát triển. Cần xác nhận workflow trên GitHub sau khi đẩy mã.
 - [ ] Kiểm tra Android/iOS release: khoá ký riêng cho bản phát hành (Android hiện dùng debug signing), tên/icon/splash, quyền truy cập cần thiết, version và smoke test trên thiết bị thật.
 - [ ] Bổ sung hướng dẫn chạy demo, dữ liệu mẫu, giới hạn tính năng và quy trình build/release trong README.
 

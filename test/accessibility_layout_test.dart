@@ -1,4 +1,5 @@
 import 'package:ecommerce_fe/features/home/domain/entities/product_entity.dart';
+import 'package:ecommerce_fe/features/home/presentation/views/home_screen.dart';
 import 'package:ecommerce_fe/core/l10n/generated/app_localizations.dart';
 import 'package:ecommerce_fe/features/navigation/presentation/views/main_nav_screen.dart';
 import 'package:ecommerce_fe/features/notifications/presentation/views/notifications_screen.dart';
@@ -99,6 +100,29 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     });
   }
+
+  testWidgets('home closing section reflows at 150 percent text size', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(720, 1280);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      buildScaledApp(HomeScreen(onOpenCart: () {}, onOpenSearch: () {})),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -4000));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mặc theo nhịp riêng.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('bottom navigation exposes meaningful semantic labels', (
     tester,

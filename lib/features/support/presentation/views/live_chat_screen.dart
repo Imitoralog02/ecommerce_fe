@@ -86,28 +86,6 @@ class _LiveChatScreenState extends ConsumerState<LiveChatScreen>
     _scheduleScrollToBottom();
   }
 
-  void _callHotline() {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.phone_in_talk_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 10),
-            Text(
-              'Đang kết nối Hotline NÉORA: 1900 8821...',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.brandBlack,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatViewModelProvider);
@@ -202,7 +180,7 @@ class _LiveChatScreenState extends ConsumerState<LiveChatScreen>
                     ],
                   ),
                   Text(
-                    'Senior Stylist · Trực tuyến',
+                    'Stylist mẫu · Chat demo',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -214,26 +192,6 @@ class _LiveChatScreenState extends ConsumerState<LiveChatScreen>
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: _callHotline,
-            icon: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.softPeach,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.cardBorder, width: 0.8),
-              ),
-              child: const Icon(
-                Icons.phone_outlined,
-                size: 18,
-                color: AppColors.coralOrange,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: Column(
         children: [

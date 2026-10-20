@@ -88,9 +88,11 @@ class NeoraEssentialsSection extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15)),
+            data: MediaQuery.of(context).copyWith(
+              textScaler: MediaQuery.textScalerOf(
+                context,
+              ).clamp(maxScaleFactor: 1.15),
+            ),
             child: SizedBox(
               height: 268,
               child: ListView.separated(
@@ -112,7 +114,7 @@ class NeoraEssentialsSection extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: 24),
-        _buildReassuranceStrip(),
+        _buildReassuranceStrip(context),
         const SizedBox(height: 18),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -206,10 +208,10 @@ class NeoraEssentialsSection extends ConsumerWidget {
     );
   }
 
-  Widget _buildReassuranceStrip() {
+  Widget _buildReassuranceStrip(BuildContext context) {
     const items = [
       (Icons.autorenew_rounded, 'Đổi trả', '30 ngày'),
-      (Icons.local_shipping_outlined, 'Giao nhanh', 'trong 24 giờ'),
+      (Icons.local_shipping_outlined, 'Giao hàng', 'dự kiến tại checkout'),
       (Icons.spa_outlined, 'Chất liệu', 'tự nhiên'),
     ];
     return Container(
@@ -220,50 +222,67 @@ class NeoraEssentialsSection extends ConsumerWidget {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: AppColors.cardBorder),
       ),
-      child: Wrap(
-        alignment: WrapAlignment.spaceAround,
-        spacing: 16,
-        runSpacing: 12,
-        children: [
-          for (final item in items)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE6EBE3),
-                    shape: BoxShape.circle,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.4;
+          final itemWidth = largeText || constraints.maxWidth < 280
+              ? constraints.maxWidth
+              : (constraints.maxWidth - 16) / 2;
+          return Wrap(
+            alignment: WrapAlignment.spaceAround,
+            spacing: 16,
+            runSpacing: 12,
+            children: [
+              for (final item in items)
+                SizedBox(
+                  width: itemWidth,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE6EBE3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          item.$1,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.$2,
+                              style: const TextStyle(
+                                fontFamily: AppTypography.sansFont,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              item.$3,
+                              softWrap: true,
+                              style: const TextStyle(
+                                fontFamily: AppTypography.sansFont,
+                                fontSize: 10.5,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Icon(item.$1, size: 16, color: AppColors.primary),
                 ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.$2,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.sansFont,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      item.$3,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.sansFont,
-                        fontSize: 10.5,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -468,10 +487,7 @@ class _SpotlightCard extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: c,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.cardBorder,
-                        width: 1,
-                      ),
+                      border: Border.all(color: AppColors.cardBorder, width: 1),
                     ),
                   ),
                 ),
@@ -739,7 +755,11 @@ class _EssentialMiniCard extends ConsumerWidget {
           const SizedBox(height: 3),
           Row(
             children: [
-              const Icon(Icons.star_rounded, size: 13, color: Color(0xFFB08A3E)),
+              const Icon(
+                Icons.star_rounded,
+                size: 13,
+                color: Color(0xFFB08A3E),
+              ),
               const SizedBox(width: 2),
               Text(
                 product.rating.toStringAsFixed(1),

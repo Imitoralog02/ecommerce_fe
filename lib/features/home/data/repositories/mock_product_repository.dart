@@ -87,7 +87,11 @@ class MockProductRepository implements ProductRepository {
       description:
           'Áo sơ mi cổ bẻ phom thoải mái, chất vải dệt tự nhiên thấm hút mồ hôi tối đa, phong cách tối giản thanh lịch.',
       availableSizes: ['S', 'M', 'L', 'XL'],
-      availableColors: [Color(0xFFF3EFE6), Color(0xFFC8B29B), Color(0xFFDCE3E6)],
+      availableColors: [
+        Color(0xFFF3EFE6),
+        Color(0xFFC8B29B),
+        Color(0xFFDCE3E6),
+      ],
       colorNames: ['Trắng Ngà', 'Be Cát', 'Xanh Nhạt'],
       tag: 'DỄ PHỐI',
       imageType: 'shirt',

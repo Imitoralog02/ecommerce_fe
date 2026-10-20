@@ -116,16 +116,26 @@ class CartViewModel extends Notifier<CartState> {
     state = next;
   }
 
-  void addToCart(
-    ProductEntity product, [
-    String size = 'M',
-    String color = 'Black',
-  ]) {
+  bool addToCart(ProductEntity product, [String? size, String? color]) {
+    final selectedSize =
+        size ??
+        (product.availableSizes.isNotEmpty
+            ? product.availableSizes.first
+            : null);
+    final selectedColor =
+        color ??
+        (product.colorNames.isNotEmpty ? product.colorNames.first : null);
+    if (selectedSize == null ||
+        selectedColor == null ||
+        !product.availableSizes.contains(selectedSize) ||
+        !product.colorNames.contains(selectedColor)) {
+      return false;
+    }
     final existingIndex = state.items.indexWhere(
       (item) =>
           item.product.id == product.id &&
-          item.selectedSize == size &&
-          item.selectedColor == color,
+          item.selectedSize == selectedSize &&
+          item.selectedColor == selectedColor,
     );
 
     if (existingIndex >= 0) {
@@ -142,14 +152,15 @@ class CartViewModel extends Notifier<CartState> {
             ...state.items,
             CartItemEntity(
               product: product,
-              selectedSize: size,
-              selectedColor: color,
+              selectedSize: selectedSize,
+              selectedColor: selectedColor,
               quantity: 1,
             ),
           ],
         ),
       );
     }
+    return true;
   }
 
   void updateQuantity(

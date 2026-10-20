@@ -52,7 +52,9 @@ class _NeoraSlidingFeedTabsState extends State<NeoraSlidingFeedTabs> {
                   color: isSelected ? AppColors.primary : AppColors.background,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : AppColors.cardBorder,
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.cardBorder,
                   ),
                 ),
                 child: Text(

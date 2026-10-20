@@ -18,9 +18,7 @@ class MockCheckoutRepository implements CheckoutRepository {
       discountAmount: quote.discount,
       totalAmount: quote.total,
       shippingAddress: request.address,
-      estimatedDelivery: request.selection.shippingType == ShippingType.express
-          ? 'Ngày mai lúc 14:00'
-          : 'Trong 2–3 ngày tới',
+      estimatedDelivery: request.selection.shippingType.demoEstimatedDelivery,
       paymentMethod: switch (request.selection.paymentType) {
         PaymentType.applePay => 'Apple Pay / Google Pay (mô phỏng)',
         PaymentType.creditCard =>
@@ -29,6 +27,7 @@ class MockCheckoutRepository implements CheckoutRepository {
         PaymentType.zalopay => 'ZaloPay (mô phỏng)',
         PaymentType.cashOnDelivery => 'Thanh toán khi nhận hàng (COD)',
       },
+      shippingType: request.selection.shippingType,
       couponCode: request.couponCode,
       coinReward: quote.coinReward,
       giftDescription: quote.giftDescription,

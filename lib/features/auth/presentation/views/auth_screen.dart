@@ -123,31 +123,25 @@ class _AuthContentState extends ConsumerState<AuthContent> {
     final notifier = ref.read(authViewModelProvider.notifier);
     final state = ref.read(authViewModelProvider);
 
-    final email = _emailController.text.trim().isEmpty
-        ? 'minhanh@neora.vn'
-        : _emailController.text.trim();
-    final password = _passwordController.text.isEmpty
-        ? '12345678'
-        : _passwordController.text;
-    final fullName = _nameController.text.trim().isEmpty
-        ? 'Nguyễn Minh Anh'
-        : _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final fullName = _nameController.text.trim();
 
     notifier.updateEmail(email);
     notifier.updatePassword(password);
     notifier.updateFullName(fullName);
-    notifier.updateConfirmPassword(
-      _confirmPasswordController.text.isEmpty
-          ? password
-          : _confirmPasswordController.text,
-    );
+    notifier.updateConfirmPassword(_confirmPasswordController.text);
 
     final success = await notifier.submit();
     if (!mounted) return;
 
-    if (success &&
-        (state.currentTab == AuthTab.login ||
-            state.currentTab == AuthTab.register)) {
+    if (success && state.currentTab == AuthTab.register) {
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+      return;
+    }
+
+    if (success && state.currentTab == AuthTab.login) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
@@ -177,10 +171,9 @@ class _AuthContentState extends ConsumerState<AuthContent> {
         ),
       );
 
-      if (widget.isBottomSheet) {
-        Navigator.pop(context);
-      }
-      Navigator.pushReplacementNamed(context, AppRoutes.main, arguments: 0);
+      final navigator = Navigator.of(context);
+      if (widget.isBottomSheet) navigator.pop();
+      navigator.pushReplacementNamed(AppRoutes.main, arguments: 0);
     }
   }
 
@@ -225,7 +218,10 @@ class _AuthContentState extends ConsumerState<AuthContent> {
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: (constraints.maxHeight - 36).clamp(0.0, double.infinity),
+              minHeight: (constraints.maxHeight - 36).clamp(
+                0.0,
+                double.infinity,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,6 +495,15 @@ class _AuthContentState extends ConsumerState<AuthContent> {
               fontSize: 11,
               color: AppColors.textSecondary,
             ),
+          ),
+          const SizedBox(height: 16),
+          _buildFieldLabel('Nhập lại mật khẩu'),
+          _buildTextField(
+            controller: _confirmPasswordController,
+            hint: 'Xác nhận mật khẩu của bạn',
+            isPassword: true,
+            isObscured: !state.isConfirmPasswordVisible,
+            onToggleVisibility: notifier.toggleConfirmPasswordVisibility,
           ),
           const SizedBox(height: 16),
           GestureDetector(

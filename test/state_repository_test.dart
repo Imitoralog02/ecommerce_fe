@@ -71,11 +71,22 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    final firstOrder = container.read(orderViewModelProvider).orders.first;
-    container.read(orderViewModelProvider.notifier).cancelOrder(firstOrder.id);
+    final orders = container.read(orderViewModelProvider).orders;
+    final shippingOrder = orders.firstWhere(
+      (order) => order.status == OrderStatus.shipping,
+    );
+    final cancellableOrder = orders.firstWhere(
+      (order) => order.status == OrderStatus.pendingConfirmation,
+    );
+    final notifier = container.read(orderViewModelProvider.notifier);
+    expect(notifier.cancelOrder(shippingOrder.id), isFalse);
+    expect(notifier.cancelOrder(cancellableOrder.id), isTrue);
 
     expect(
-      container.read(orderViewModelProvider).findById(firstOrder.id)?.status,
+      container
+          .read(orderViewModelProvider)
+          .findById(cancellableOrder.id)
+          ?.status,
       OrderStatus.cancelled,
     );
   });
@@ -226,7 +237,7 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    const productId = 'review-product';
+    const productId = 'prod_dress_wrap';
     final provider = reviewViewModelProvider(productId);
     final notifier = container.read(provider.notifier);
     notifier.selectFilter(ReviewFilter.images);

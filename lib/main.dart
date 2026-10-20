@@ -22,11 +22,26 @@ import 'features/wishlist/data/repositories/shared_preferences_wishlist_reposito
 import 'features/wishlist/di/wishlist_providers.dart';
 import 'features/wallet/data/repositories/shared_preferences_wallet_repository.dart';
 import 'features/wallet/di/wallet_providers.dart';
+import 'data/local/demo_preferences_store.dart';
+import 'features/history/data/repositories/mock_recently_viewed_repository.dart';
+import 'features/history/di/history_providers.dart';
+import 'features/notifications/data/repositories/mock_notification_repository.dart';
+import 'features/notifications/di/notification_providers.dart';
+import 'features/payment_methods/data/repositories/mock_payment_methods_repository.dart';
+import 'features/payment_methods/di/payment_methods_providers.dart';
+import 'features/returns/data/repositories/mock_return_repository.dart';
+import 'features/returns/di/return_providers.dart';
+import 'features/reviews/data/repositories/mock_review_repository.dart';
+import 'features/reviews/di/review_providers.dart';
+import 'features/search/data/repositories/mock_search_repository.dart';
+import 'features/search/di/search_providers.dart';
+import 'features/support/data/repositories/mock_support_repository.dart';
+import 'features/support/di/support_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final preferences = await SharedPreferences.getInstance();
-  await preferences.remove('has_seen_onboarding');
+  final demoStore = DemoPreferencesStore(preferences);
   SystemChrome.setSystemUIOverlayStyle(
     SystemUiOverlayStyle.dark.copyWith(
       statusBarColor: Colors.transparent,
@@ -62,6 +77,30 @@ Future<void> main() async {
         ),
         walletRepositoryProvider.overrideWithValue(
           SharedPreferencesWalletRepository(preferences),
+        ),
+        recentlyViewedRepositoryProvider.overrideWithValue(
+          MockRecentlyViewedRepository(
+            MockProductRepository.mockCatalog,
+            demoStore,
+          ),
+        ),
+        notificationRepositoryProvider.overrideWithValue(
+          MockNotificationRepository(demoStore),
+        ),
+        paymentMethodsRepositoryProvider.overrideWithValue(
+          MockPaymentMethodsRepository(demoStore),
+        ),
+        returnRepositoryProvider.overrideWithValue(
+          MockReturnRepository(demoStore),
+        ),
+        reviewRepositoryProvider.overrideWithValue(
+          MockReviewRepository(demoStore),
+        ),
+        searchRepositoryProvider.overrideWithValue(
+          MockSearchRepository(MockProductRepository(), demoStore),
+        ),
+        supportRepositoryProvider.overrideWithValue(
+          MockSupportRepository(demoStore),
         ),
       ],
       child: const NeoraApp(),

@@ -32,6 +32,7 @@ class AuthState {
   final bool isPasswordVisible;
   final bool isConfirmPasswordVisible;
   final bool isLoading;
+  final bool isAuthenticated;
   final AuthErrorCode? errorCode;
   final AuthSuccessCode? successCode;
 
@@ -46,6 +47,7 @@ class AuthState {
     this.isPasswordVisible = false,
     this.isConfirmPasswordVisible = false,
     this.isLoading = false,
+    this.isAuthenticated = false,
     this.errorCode,
     this.successCode,
   });
@@ -65,6 +67,7 @@ class AuthState {
     bool? isPasswordVisible,
     bool? isConfirmPasswordVisible,
     bool? isLoading,
+    bool? isAuthenticated,
     AuthErrorCode? errorCode,
     AuthSuccessCode? successCode,
     bool clearError = false,
@@ -82,6 +85,7 @@ class AuthState {
       isConfirmPasswordVisible:
           isConfirmPasswordVisible ?? this.isConfirmPasswordVisible,
       isLoading: isLoading ?? this.isLoading,
+      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       errorCode: clearError ? null : (errorCode ?? this.errorCode),
       successCode: clearSuccess ? null : (successCode ?? this.successCode),
     );
@@ -134,6 +138,10 @@ class AuthViewModel extends Notifier<AuthState> {
     state = state.copyWith(
       isConfirmPasswordVisible: !state.isConfirmPasswordVisible,
     );
+  }
+
+  void logout() {
+    state = const AuthState();
   }
 
   bool _isValidEmail(String email) {
@@ -190,7 +198,10 @@ class AuthViewModel extends Notifier<AuthState> {
         state = state.copyWith(errorCode: AuthErrorCode.invalidEmail);
         return false;
       }
-      if (password.length < 6) {
+      if (password.length < 8 ||
+          !RegExp(r'[A-Z]').hasMatch(password) ||
+          !RegExp(r'[a-z]').hasMatch(password) ||
+          !RegExp(r'[0-9]').hasMatch(password)) {
         state = state.copyWith(errorCode: AuthErrorCode.weakPassword);
         return false;
       }
@@ -238,6 +249,10 @@ class AuthViewModel extends Notifier<AuthState> {
       state = state.copyWith(errorCode: AuthErrorCode.accountRequired);
       return false;
     }
+    if (!_isValidEmail(email)) {
+      state = state.copyWith(errorCode: AuthErrorCode.invalidEmail);
+      return false;
+    }
     if (password.isEmpty) {
       state = state.copyWith(errorCode: AuthErrorCode.passwordRequired);
       return false;
@@ -259,7 +274,7 @@ class AuthViewModel extends Notifier<AuthState> {
       );
       return false;
     }
-    state = state.copyWith(isLoading: false);
+    state = state.copyWith(isLoading: false, isAuthenticated: true);
     return true;
   }
 }

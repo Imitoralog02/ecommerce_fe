@@ -455,7 +455,7 @@ abstract class AppLocalizations {
   /// No description provided for @fastDeliveryPerk.
   ///
   /// In vi, this message translates to:
-  /// **'Giao nhanh 2h'**
+  /// **'Giao hỏa tốc'**
   String get fastDeliveryPerk;
 
   /// No description provided for @returnsPerk.

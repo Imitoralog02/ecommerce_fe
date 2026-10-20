@@ -54,7 +54,7 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
           ),
         ),
         title: Text(
-          'Đánh Giá (${widget.product.reviewCount})',
+          'Đánh Giá Mẫu (${reviewState.totalCount(widget.product)})',
           style: const TextStyle(
             fontSize: 17.5,
             fontWeight: FontWeight.w900,
@@ -68,12 +68,12 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         children: [
           // 1. Overall Score & Rating Progress Card
-          _buildScoreBreakdownCard(),
+          _buildScoreBreakdownCard(reviewState),
 
           const SizedBox(height: 18),
 
           // 2. Buyer Photo Gallery Carousel
-          _buildBuyerGallery(),
+          _buildBuyerGallery(reviewState.reviews),
 
           const SizedBox(height: 16),
 
@@ -81,6 +81,12 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
           _buildFilterChips(),
 
           const SizedBox(height: 16),
+
+          Text(
+            'Đang hiển thị ${filtered.length} đánh giá mẫu của sản phẩm',
+            style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 10),
 
           // 4. Reviews List
           ...filtered.map(_buildReviewCard),
@@ -91,7 +97,7 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
     );
   }
 
-  Widget _buildScoreBreakdownCard() {
+  Widget _buildScoreBreakdownCard(ReviewState reviewState) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -113,7 +119,7 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                '${widget.product.rating}',
+                reviewState.averageRating(widget.product).toStringAsFixed(1),
                 style: const TextStyle(
                   fontSize: 44,
                   fontWeight: FontWeight.w900,
@@ -133,7 +139,7 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${widget.product.reviewCount} nhận xét',
+                '${reviewState.totalCount(widget.product)} nhận xét',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -151,11 +157,18 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
           Expanded(
             child: Column(
               children: [
-                _buildStarBar(5, 0.85),
-                _buildStarBar(4, 0.12),
-                _buildStarBar(3, 0.02),
-                _buildStarBar(2, 0.01),
-                _buildStarBar(1, 0.00),
+                for (final star in [5, 4, 3, 2, 1])
+                  _buildStarBar(
+                    star,
+                    reviewState.reviews.isEmpty
+                        ? 0
+                        : reviewState.reviews
+                                  .where(
+                                    (review) => review.rating.round() == star,
+                                  )
+                                  .length /
+                              reviewState.reviews.length,
+                  ),
               ],
             ),
           ),
@@ -210,22 +223,20 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
     );
   }
 
-  Widget _buildBuyerGallery() {
-    final buyerImages = [
-      'assets/images/real/p_dress.jpg',
-      'assets/images/real/p_dress_side.jpg',
-      'assets/images/real/p_knit.jpg',
-      'assets/images/real/p_hoodie.jpg',
-    ];
+  Widget _buildBuyerGallery(List<ReviewEntity> reviews) {
+    final buyerImages = reviews
+        .expand((review) => review.reviewImages)
+        .toList();
+    if (buyerImages.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'HÌNH ẢNH THỰC TẾ TỪ NGƯỜI MUA 📸',
+              'ẢNH MINH HỌA CỦA SẢN PHẨM 📸',
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w900,
@@ -234,8 +245,8 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
               ),
             ),
             Text(
-              '128 ảnh',
-              style: TextStyle(
+              '${buyerImages.length} ảnh',
+              style: const TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.coralOrange,
@@ -536,7 +547,7 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Phản hồi từ NÉORA Concierge ✨',
+                    'Phản hồi mẫu từ NÉORA ✨',
                     style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w900,

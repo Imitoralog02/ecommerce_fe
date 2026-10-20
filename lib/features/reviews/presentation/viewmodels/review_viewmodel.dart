@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/media/di/media_picker_providers.dart';
 import '../../../../core/media/domain/media_picker_repository.dart';
+import '../../../home/di/home_providers.dart';
+import '../../../home/domain/entities/product_entity.dart';
 import '../../di/review_providers.dart';
 import '../../domain/entities/review_entity.dart';
 
@@ -15,6 +17,28 @@ class ReviewState {
 
   final List<ReviewEntity> reviews;
   final ReviewFilter selectedFilter;
+
+  int totalCount(ProductEntity product) =>
+      product.reviewCount +
+      reviews
+          .where(
+            (review) =>
+                !review.id.startsWith('rev_') && !review.id.startsWith('seed_'),
+          )
+          .length;
+
+  double averageRating(ProductEntity product) {
+    final submitted = reviews
+        .where(
+          (review) =>
+              !review.id.startsWith('rev_') && !review.id.startsWith('seed_'),
+        )
+        .toList();
+    if (submitted.isEmpty) return product.rating;
+    return (product.rating * product.reviewCount +
+            submitted.fold<double>(0, (sum, review) => sum + review.rating)) /
+        (product.reviewCount + submitted.length);
+  }
 
   List<ReviewEntity> get filteredReviews => switch (selectedFilter) {
     ReviewFilter.images =>
@@ -80,9 +104,18 @@ class ReviewViewModel extends Notifier<ReviewState> {
     return added;
   }
 
-  Future<String?> pickReviewImage() => ref
-      .read(mediaPickerRepositoryProvider)
-      .pickImage(MediaPickerPurpose.review);
+  Future<String?> pickReviewImage() async {
+    final product = await ref
+        .read(productRepositoryProvider)
+        .getProductById(productId);
+    if (!ref.mounted) return null;
+    return ref
+        .read(mediaPickerRepositoryProvider)
+        .pickImage(
+          MediaPickerPurpose.review,
+          suggestedAsset: product?.imagePath,
+        );
+  }
 }
 
 final reviewViewModelProvider = NotifierProvider.autoDispose

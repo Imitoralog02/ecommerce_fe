@@ -1,5 +1,19 @@
 enum ShippingType { standard, express, storePickup }
 
+extension ShippingTypeDisplay on ShippingType {
+  String get displayLabel => switch (this) {
+    ShippingType.standard => 'Giao hàng tiêu chuẩn',
+    ShippingType.express => 'Giao hàng hỏa tốc',
+    ShippingType.storePickup => 'Nhận tại cửa hàng',
+  };
+
+  String get demoEstimatedDelivery => switch (this) {
+    ShippingType.standard => 'Trong 2–3 ngày làm việc',
+    ShippingType.express => 'Trong 24 giờ (dự kiến)',
+    ShippingType.storePickup => 'Chờ xác nhận thời gian nhận',
+  };
+}
+
 enum PaymentType { creditCard, applePay, momo, zalopay, cashOnDelivery }
 
 class CheckoutSelection {

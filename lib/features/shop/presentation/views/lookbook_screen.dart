@@ -6,79 +6,32 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
 import '../../../cart/presentation/views/cart_screen.dart';
-import '../../../home/domain/entities/product_entity.dart';
 import '../../../home/presentation/viewmodels/home_viewmodel.dart';
 import '../../../product_detail/presentation/views/product_detail_screen.dart';
-
-class LookbookHotspot {
-  final String title;
-  final String category;
-  final double price;
-  final double originalPrice;
-  final String imageType;
-  final String imagePath;
-  final Offset position;
-  final ProductEntity? product;
-
-  const LookbookHotspot({
-    required this.title,
-    required this.category,
-    required this.price,
-    required this.originalPrice,
-    required this.imageType,
-    required this.imagePath,
-    required this.position,
-    this.product,
-  });
-}
-
-class LookbookThemeModel {
-  final String id;
-  final String badge;
-  final String occasion;
-  final String gender;
-  final String title;
-  final String subtitle;
-  final String imagePath;
-  final String inspiration;
-  final List<LookbookHotspot> items;
-
-  const LookbookThemeModel({
-    required this.id,
-    required this.badge,
-    required this.occasion,
-    required this.gender,
-    required this.title,
-    required this.subtitle,
-    required this.imagePath,
-    required this.inspiration,
-    required this.items,
-  });
-
-  double get totalPrice => items.fold(0, (sum, i) => sum + i.price);
-  double get totalOriginalPrice =>
-      items.fold(0, (sum, i) => sum + i.originalPrice);
-  double get bundlePrice => totalPrice;
-  double get savings => totalOriginalPrice - bundlePrice;
-}
+import '../../domain/services/lookbook_outfits.dart';
 
 class LookbookScreen extends ConsumerStatefulWidget {
   final bool initialShowDetail;
+  final String initialOccasion;
 
-  const LookbookScreen({super.key, this.initialShowDetail = false});
+  const LookbookScreen({
+    super.key,
+    this.initialShowDetail = false,
+    this.initialOccasion = 'Đi làm',
+  });
 
   @override
   ConsumerState<LookbookScreen> createState() => _LookbookScreenState();
 }
 
 class _LookbookScreenState extends ConsumerState<LookbookScreen> {
-  String _selectedOccasion = 'Đi làm';
+  late String _selectedOccasion;
   String _selectedGender = 'Tất cả';
   double _budget = 1800000;
   bool _showOutfitDetail = false;
   int _selectedOutfitIndex = 0;
   final Set<int> _checkedItems = {0, 1, 2};
-  int _selectedAltBagIndex = -1; // -1 = default cognac bag, 0 = black bag, 1 = cream tote
+  int _selectedAltBagIndex = -1; // -1 = nâu, 0 = đen
 
   static const _occasions = [
     (label: 'Đi làm', icon: Icons.work_outline_rounded),
@@ -92,6 +45,10 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedOccasion =
+        _occasions.any((occasion) => occasion.label == widget.initialOccasion)
+        ? widget.initialOccasion
+        : 'Đi làm';
     _showOutfitDetail = widget.initialShowDetail;
   }
 
@@ -112,156 +69,15 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
     return '${buffer.toString()} ₫';
   }
 
-  List<LookbookThemeModel> _getOutfits(List<ProductEntity> catalog) {
-    ProductEntity findProd(String type, {double fallbackPrice = 590000}) {
-      return catalog.firstWhere(
-        (p) => p.imageType == type || p.category.toLowerCase().contains(type),
-        orElse: () => catalog.isNotEmpty
-            ? catalog.first
-              : ProductEntity(
-                id: 'default_$type',
-                pieceNumber: '01',
-                title: 'Trang phục NÉORA',
-                subCategory: 'THỜI TRANG',
-                category: 'Sơ mi',
-                price: fallbackPrice,
-                composition: '100% Cotton tự nhiên',
-                description: 'Thiết kế tối giản cho nhịp sống mỗi ngày.',
-                availableSizes: const ['S', 'M', 'L'],
-                imageType: type,
-              ),
-      );
-    }
-
-    final shirtProd = findProd('shirt', fallbackPrice: 590000);
-    final jeansProd = findProd('jeans', fallbackPrice: 690000);
-    final bagProd = findProd('bag', fallbackPrice: 490000);
-    final sneakerProd = findProd('sneaker', fallbackPrice: 650000);
-
-    final bagTitle = _selectedAltBagIndex == 0
-        ? 'Túi vai da - Đen'
-        : _selectedAltBagIndex == 1
-        ? 'Túi tote vải - Kem'
-        : 'Túi vai da mềm';
-    final bagPrice = _selectedAltBagIndex == 1 ? 290000.0 : 490000.0;
-    const bagImage = 'assets/images/real/p_bag.jpg';
-
-    return [
-      LookbookThemeModel(
-        id: 'outfit-female-work',
-        badge: 'NÉORA CHỌN CHO BẠN',
-        occasion: 'Đi làm',
-        gender: 'Nữ',
-        title: 'Đi làm, thật nhẹ nhàng',
-        subtitle: 'Nữ • 3 món • Trắng ngà, xám than & nâu',
-        imagePath: 'assets/images/real/p_knit.jpg',
-        inspiration:
-            'Sơ vin nhẹ và xắn tay áo một nếp để tổng thể tự nhiên hơn.',
-        items: [
-          LookbookHotspot(
-            title: 'Sơ mi cotton dáng rộng',
-            category: 'Cỡ M • Trắng ngà',
-            price: 590000,
-            originalPrice: 690000,
-            imageType: 'shirt',
-            imagePath: 'assets/images/real/p_shirt.jpg',
-            position: const Offset(0.5, 0.35),
-            product: shirtProd.copyWith(
-              title: 'Sơ mi cotton dáng rộng',
-              price: 590000,
-              imagePath: 'assets/images/real/p_shirt.jpg',
-            ),
-          ),
-          LookbookHotspot(
-            title: 'Quần âu ống suông',
-            category: 'Cỡ M • Xám than',
-            price: 690000,
-            originalPrice: 790000,
-            imageType: 'jeans',
-            imagePath: 'assets/images/real/p_jeans.jpg',
-            position: const Offset(0.5, 0.65),
-            product: jeansProd.copyWith(
-              title: 'Quần âu ống suông',
-              price: 690000,
-              imagePath: 'assets/images/real/p_jeans.jpg',
-            ),
-          ),
-          LookbookHotspot(
-            title: bagTitle,
-            category: _selectedAltBagIndex == 1
-                ? 'Một cỡ • Kem tự nhiên'
-                : _selectedAltBagIndex == 0
-                ? 'Một cỡ • Đen'
-                : 'Một cỡ • Nâu da bò',
-            price: bagPrice,
-            originalPrice: 590000,
-            imageType: 'bag',
-            imagePath: bagImage,
-            position: const Offset(0.68, 0.55),
-            product: bagProd.copyWith(
-              title: bagTitle,
-              price: bagPrice,
-              imagePath: bagImage,
-            ),
-          ),
-        ],
-      ),
-      LookbookThemeModel(
-        id: 'outfit-male-work',
-        badge: 'DÀNH CHO NAM',
-        occasion: 'Đi làm',
-        gender: 'Nam',
-        title: 'Gọn gàng, không gò bó',
-        subtitle: '3 món • Áo polo, quần khaki & giày da',
-        imagePath: 'assets/images/real/banner_men.jpg',
-        inspiration:
-            'Phom dáng vừa vặn cùng chất liệu thoáng khí giúp bạn thoải mái suốt ngày dài.',
-        items: [
-          LookbookHotspot(
-            title: 'Áo khoác linen mỏng',
-            category: 'Cỡ L • Xanh rêu',
-            price: 540000,
-            originalPrice: 650000,
-            imageType: 'shirt',
-            imagePath: 'assets/images/real/p_shirt.jpg',
-            position: const Offset(0.5, 0.35),
-            product: shirtProd.copyWith(
-              title: 'Áo khoác linen mỏng',
-              price: 540000,
-              imagePath: 'assets/images/real/p_shirt.jpg',
-            ),
-          ),
-          LookbookHotspot(
-            title: 'Quần linen ống đứng',
-            category: 'Cỡ L • Be cát',
-            price: 540000,
-            originalPrice: 650000,
-            imageType: 'jeans',
-            imagePath: 'assets/images/real/p_jeans.jpg',
-            position: const Offset(0.5, 0.65),
-            product: jeansProd.copyWith(
-              title: 'Quần linen ống đứng',
-              price: 540000,
-              imagePath: 'assets/images/real/p_jeans.jpg',
-            ),
-          ),
-          LookbookHotspot(
-            title: 'Giày da tối giản',
-            category: 'Cỡ 41 • Trắng kem',
-            price: 650000,
-            originalPrice: 790000,
-            imageType: 'sneaker',
-            imagePath: 'assets/images/real/p_sneaker.jpg',
-            position: const Offset(0.5, 0.88),
-            product: sneakerProd.copyWith(
-              title: 'Giày da tối giản',
-              price: 650000,
-              imagePath: 'assets/images/real/p_sneaker.jpg',
-            ),
-          ),
-        ],
-      ),
-    ];
+  void _openOutfit(int index, LookbookThemeModel outfit) {
+    setState(() {
+      _selectedOutfitIndex = index;
+      _checkedItems
+        ..clear()
+        ..addAll(List.generate(outfit.items.length, (itemIndex) => itemIndex));
+      _selectedAltBagIndex = -1;
+      _showOutfitDetail = true;
+    });
   }
 
   void _addSelectedToCart(LookbookThemeModel outfit) {
@@ -270,8 +86,11 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
     for (int i = 0; i < outfit.items.length; i++) {
       if (_checkedItems.contains(i)) {
         final item = outfit.items[i];
-        if (item.product != null) {
-          notifier.addToCart(item.product!, 'M', item.category);
+        if (notifier.addToCart(
+          item.product,
+          item.selectedSize,
+          item.selectedColor,
+        )) {
           addedCount++;
         }
       }
@@ -306,8 +125,30 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
-    final outfits = _getOutfits(homeState.allProducts);
-    final selectedOutfit = outfits[_selectedOutfitIndex.clamp(0, outfits.length - 1)];
+    if (homeState.isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+    final outfits = LookbookOutfits.select(
+      homeState.allProducts,
+      occasion: _selectedOccasion,
+      gender: _selectedGender,
+      budget: _budget,
+      bagColor: _selectedAltBagIndex == 0 ? 'Đen' : 'Nâu Da Bò',
+    );
+    if (outfits.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Stylist mỗi ngày')),
+        body: const Center(
+          child: Text('Chưa có outfit phù hợp với lựa chọn này.'),
+        ),
+      );
+    }
+    final selectedOutfit =
+        outfits[_selectedOutfitIndex.clamp(0, outfits.length - 1)];
 
     if (_showOutfitDetail) {
       return _buildOutfitDetailScreen(selectedOutfit);
@@ -316,13 +157,13 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
   }
 
   // ===========================================================================
-  // SCREEN 8: Stylist gợi ý outfit - NẾP
+  // Stylist gợi ý outfit - NÉORA
   // ===========================================================================
   Widget _buildStylistOverviewScreen(List<LookbookThemeModel> outfits) {
     final cartCount = ref.watch(cartViewModelProvider).totalItemCount;
     final primaryOutfit = outfits.first;
     final secondaryOutfit = outfits.length > 1 ? outfits[1] : outfits.first;
-    final diffFromBudget = (_budget - primaryOutfit.totalPrice).clamp(0.0, double.infinity);
+    final diffFromBudget = _budget - primaryOutfit.totalPrice;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -630,9 +471,9 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '2 outfit vừa ngân sách',
+                    '${outfits.length} outfit vừa ngân sách',
                     style: AppTypography.editorialTitle,
                   ),
                 ),
@@ -794,12 +635,7 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
                           width: double.infinity,
                           height: 46,
                           child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                _selectedOutfitIndex = 0;
-                                _showOutfitDetail = true;
-                              });
-                            },
+                            onPressed: () => _openOutfit(0, primaryOutfit),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
@@ -819,99 +655,97 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
               ),
             ),
 
-            const SizedBox(height: 14),
+            if (outfits.length > 1) const SizedBox(height: 14),
 
-            // Secondary Outfit Card (Nam)
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _selectedOutfitIndex = 1;
-                  _showOutfitDetail = true;
-                });
-              },
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.studioGray,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.cardBorder),
-                ),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: SizedBox(
-                        width: 82,
-                        height: 96,
-                        child: Image.asset(
-                          secondaryOutfit.imagePath,
-                          fit: BoxFit.cover,
-                          alignment: _imageAlignment(secondaryOutfit.imagePath),
+            // Secondary Outfit Card
+            if (outfits.length > 1)
+              InkWell(
+                onTap: () => _openOutfit(1, secondaryOutfit),
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.studioGray,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: SizedBox(
+                          width: 82,
+                          height: 96,
+                          child: Image.asset(
+                            secondaryOutfit.imagePath,
+                            fit: BoxFit.cover,
+                            alignment: _imageAlignment(
+                              secondaryOutfit.imagePath,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            secondaryOutfit.badge,
-                            style: const TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.0,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            secondaryOutfit.title,
-                            style: const TextStyle(
-                              fontFamily: AppTypography.serifFont,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            secondaryOutfit.subtitle,
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _formatVnd(secondaryOutfit.totalPrice),
-                                style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
-                                ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              secondaryOutfit.badge,
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.0,
+                                color: AppColors.primary,
                               ),
-                              const Text(
-                                'Xem chi tiết →',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              secondaryOutfit.title,
+                              style: const TextStyle(
+                                fontFamily: AppTypography.serifFont,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              secondaryOutfit.subtitle,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _formatVnd(secondaryOutfit.totalPrice),
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const Text(
+                                  'Xem chi tiết →',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -922,6 +756,11 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
   // SCREEN 9: Chi tiết outfit - NÉORA
   // ===========================================================================
   Widget _buildOutfitDetailScreen(LookbookThemeModel outfit) {
+    final selectedCount = outfit.items
+        .asMap()
+        .keys
+        .where(_checkedItems.contains)
+        .length;
     final selectedTotal = outfit.items.asMap().entries.fold<double>(
       0,
       (sum, entry) =>
@@ -1046,7 +885,9 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    'Trong ngân sách (${_formatVnd(_budget)})',
+                    selectedTotal <= _budget
+                        ? 'Trong ngân sách (${_formatVnd(_budget)})'
+                        : 'Vượt ngân sách (${_formatVnd(_budget)})',
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -1101,7 +942,7 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
                   ),
                 ),
                 Text(
-                  'Đã chọn ${_checkedItems.length}/${outfit.items.length}',
+                  'Đã chọn $selectedCount/${outfit.items.length}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1149,25 +990,20 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
                     const SizedBox(width: 10),
                     GestureDetector(
                       onTap: () {
-                        if (item.product != null) {
-                          Navigator.push(
-                            context,
-                            AppRouter.page(
-                              builder: (_) =>
-                                  ProductDetailScreen(product: item.product!),
-                            ),
-                          );
-                        }
+                        Navigator.push(
+                          context,
+                          AppRouter.page(
+                            builder: (_) =>
+                                ProductDetailScreen(product: item.product),
+                          ),
+                        );
                       },
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: SizedBox(
                           width: 58,
                           height: 66,
-                          child: Image.asset(
-                            item.imagePath,
-                            fit: BoxFit.cover,
-                          ),
+                          child: Image.asset(item.imagePath, fit: BoxFit.cover),
                         ),
                       ),
                     ),
@@ -1221,42 +1057,36 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
               );
             }),
 
-            const SizedBox(height: 20),
+            if (outfit.items.any(
+              (item) => item.product.id == 'prod_leather_bag',
+            )) ...[
+              const SizedBox(height: 20),
 
-            // Đổi một chút, vẫn là bạn
-            const Text(
-              'Đổi một chút, vẫn là bạn',
-              style: AppTypography.editorialTitle,
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Thay đổi phụ kiện trong ngân sách của bạn.',
-              style: AppTypography.body,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildAlternativeCard(
-                    index: 0,
-                    image: 'assets/images/real/p_bag.jpg',
-                    title: 'Túi vai da - Đen',
-                    price: '490.000 ₫',
-                    note: 'Cùng mức giá',
-                  ),
+              // Chọn màu có sẵn của túi trong catalog
+              const Text(
+                'Đổi một chút, vẫn là bạn',
+                style: AppTypography.editorialTitle,
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Đổi màu túi, giữ nguyên giá sản phẩm.',
+                style: AppTypography.body,
+              ),
+              const SizedBox(height: 12),
+              _buildAlternativeCard(
+                index: 0,
+                image: 'assets/images/real/p_bag.jpg',
+                title: 'Túi vai da - Đen',
+                price: _formatVnd(
+                  outfit.items
+                      .firstWhere(
+                        (item) => item.product.id == 'prod_leather_bag',
+                      )
+                      .price,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildAlternativeCard(
-                    index: 1,
-                    image: 'assets/images/real/p_sneaker.jpg',
-                    title: 'Túi tote vải - Kem',
-                    price: '290.000 ₫',
-                    note: 'Tiết kiệm 200.000 ₫',
-                  ),
-                ),
-              ],
-            ),
+                note: 'Cùng mức giá',
+              ),
+            ],
           ],
         ),
       ),
@@ -1276,7 +1106,7 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tổng ${_checkedItems.length} món đã chọn',
+                      'Tổng $selectedCount món đã chọn',
                       style: const TextStyle(
                         fontSize: 11.5,
                         color: AppColors.textSecondary,
@@ -1295,7 +1125,7 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: _checkedItems.isEmpty
+                onPressed: selectedCount == 0
                     ? null
                     : () => _addSelectedToCart(outfit),
                 style: ElevatedButton.styleFrom(
@@ -1309,7 +1139,7 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-                child: Text('Thêm ${_checkedItems.length} món vào giỏ'),
+                child: Text('Thêm $selectedCount món vào giỏ'),
               ),
             ],
           ),

@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/product_visual_widget.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
+import '../../../checkout/domain/entities/checkout_selection.dart';
 import '../../../orders/domain/entities/order_entity.dart';
 import '../../../orders/presentation/viewmodels/order_viewmodel.dart';
 import '../../domain/entities/tracking_snapshot.dart';
@@ -192,7 +193,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Dự kiến giao ${_trackedOrder.estimatedDelivery ?? 'trong 2–3 ngày'}',
+                      _trackedOrder.status == OrderStatus.cancelled
+                          ? 'Đơn hàng đã huỷ'
+                          : _trackedOrder.status == OrderStatus.delivered
+                          ? 'Đơn hàng đã giao'
+                          : _trackedOrder.shippingType ==
+                                ShippingType.storePickup
+                          ? 'Dự kiến nhận: ${_trackedOrder.estimatedDelivery ?? _trackedOrder.shippingType.demoEstimatedDelivery}'
+                          : 'Dự kiến giao: ${_trackedOrder.estimatedDelivery ?? _trackedOrder.shippingType.demoEstimatedDelivery}',
                       style: TextStyle(
                         fontFamily: AppTypography.serifFont,
                         fontSize: 20,
@@ -202,7 +210,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Đặt ngày ${_trackedOrder.orderDateFormatted} · Giao hàng hỏa tốc',
+                      'Đặt ngày ${_trackedOrder.orderDateFormatted} · ${_trackedOrder.shippingType.displayLabel}',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,

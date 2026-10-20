@@ -52,9 +52,11 @@ class HomeViewModel extends Notifier<HomeState> {
   }
 
   Future<void> loadHomeData() async {
+    if (!ref.mounted) return;
     final repository = ref.read(productRepositoryProvider);
     state = state.copyWith(isLoading: true);
     final all = await repository.getFeaturedProducts();
+    if (!ref.mounted) return;
     state = state.copyWith(isLoading: false, allProducts: all);
   }
 

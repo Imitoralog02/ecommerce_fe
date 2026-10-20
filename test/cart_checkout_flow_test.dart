@@ -51,8 +51,8 @@ void main() {
     final catalogProduct = MockProductRepository.mockCatalog.first;
     final cart = container.read(cartViewModelProvider.notifier);
 
-    cart.addToCart(catalogProduct.copyWith(price: 100000), 'M', 'Rose');
-    cart.addToCart(catalogProduct.copyWith(price: 200000), 'M', 'Rose');
+    cart.addToCart(catalogProduct.copyWith(price: 100000), 'M', 'Kem Be');
+    cart.addToCart(catalogProduct.copyWith(price: 200000), 'M', 'Kem Be');
 
     final state = container.read(cartViewModelProvider);
     expect(state.items, hasLength(1));
@@ -130,15 +130,15 @@ void main() {
       final product = MockProductRepository.mockCatalog.first;
       final cart = container.read(cartViewModelProvider.notifier);
 
-      cart.addToCart(product, 'M', 'Red');
-      cart.addToCart(product, 'M', 'Blue');
+      cart.addToCart(product, 'M', 'Kem Be');
+      cart.addToCart(product, 'M', 'Camel Nâu');
       expect(container.read(cartViewModelProvider).items, hasLength(2));
 
       expect(cart.applyCoupon('neo20'), isTrue);
       final originalDiscount = container.read(cartViewModelProvider).discount;
       expect(originalDiscount, product.price * 2 * 0.20);
 
-      cart.addToCart(product, 'M', 'Red');
+      cart.addToCart(product, 'M', 'Kem Be');
       expect(container.read(cartViewModelProvider).items, hasLength(2));
       expect(
         container.read(cartViewModelProvider).discount,
@@ -147,11 +147,11 @@ void main() {
       expect(cart.applyCoupon('NOT-A-COUPON'), isFalse);
       expect(container.read(cartViewModelProvider).appliedCoupon, 'NEO20');
 
-      cart.removeFromCart(product.id, size: 'M', color: 'Blue');
+      cart.removeFromCart(product.id, size: 'M', color: 'Camel Nâu');
       expect(container.read(cartViewModelProvider).items, hasLength(1));
       expect(
         container.read(cartViewModelProvider).items.single.selectedColor,
-        'Red',
+        'Kem Be',
       );
     },
   );

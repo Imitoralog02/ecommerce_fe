@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/media/di/media_picker_providers.dart';
 import '../../../../core/media/domain/media_picker_repository.dart';
+import '../../../home/di/home_providers.dart';
 import '../../di/return_providers.dart';
 import '../../domain/entities/return_request.dart';
 
@@ -48,9 +49,17 @@ class ReturnRequestViewModel extends Notifier<ReturnRequestDraft> {
       _save(state.copyWith(evidencePhotos: [...state.evidencePhotos, path]));
 
   Future<void> pickEvidencePhoto() async {
+    final productId = state.selectedItemIds.firstOrNull;
+    final product = productId == null
+        ? null
+        : await ref.read(productRepositoryProvider).getProductById(productId);
+    if (!ref.mounted) return;
     final path = await ref
         .read(mediaPickerRepositoryProvider)
-        .pickImage(MediaPickerPurpose.returnEvidence);
+        .pickImage(
+          MediaPickerPurpose.returnEvidence,
+          suggestedAsset: product?.imagePath,
+        );
     if (path == null || !ref.mounted) return;
     addEvidencePhoto(path);
   }

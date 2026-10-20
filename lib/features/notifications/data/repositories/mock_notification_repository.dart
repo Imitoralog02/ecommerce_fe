@@ -1,13 +1,26 @@
+import '../../../../data/local/demo_preferences_store.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../../domain/repositories/notification_repository.dart';
 
 class MockNotificationRepository implements NotificationRepository {
+  MockNotificationRepository([this._store]) {
+    final saved = _store?.read(_readKey);
+    if (saved is List) {
+      final readIds = saved.whereType<String>().toSet();
+      _items = _items
+          .map((item) => item.copyWith(isRead: readIds.contains(item.id)))
+          .toList();
+    }
+  }
+
+  static const _readKey = 'demo_read_notifications_v1';
+  final DemoPreferencesStore? _store;
   List<NotificationEntity> _items = const [
     NotificationEntity(
       id: 'notif_1',
-      title: 'Đơn hàng #NEO-2094 đang được vận chuyển',
+      title: 'Đơn mẫu #NEO-2094 đang giao',
       description:
-          'Kiện hàng thời trang NÉORA của bạn đã xuất kho Tân Bình và đang trên đường giao hỏa tốc.',
+          'Trạng thái vận chuyển mô phỏng đã được cập nhật. Chưa có kiện hàng thật.',
       timeLabel: '10 phút trước',
       iconEmoji: '🚚',
       iconBackgroundValue: 0xFFFBF4EB,
@@ -16,9 +29,9 @@ class MockNotificationRepository implements NotificationRepository {
     ),
     NotificationEntity(
       id: 'notif_2',
-      title: 'Tặng bạn Voucher 50K mừng Hội Viên Vàng ✨',
+      title: 'Voucher mẫu 50K cho Hội Viên Vàng ✨',
       description:
-          'Đặc quyền dành riêng cho khách hàng VIP: Giảm ngay 50.000₫ cho mọi đơn hàng từ 599.000₫ trong tháng này.',
+          'Dùng voucher trong bản demo để thử tính giá đơn đủ điều kiện.',
       timeLabel: '2 giờ trước',
       iconEmoji: '🎟️',
       iconBackgroundValue: 0xFFEDF4ED,
@@ -36,9 +49,9 @@ class MockNotificationRepository implements NotificationRepository {
     ),
     NotificationEntity(
       id: 'notif_4',
-      title: 'Đơn hàng #NEO-3841 đã giao thành công',
+      title: 'Đơn mẫu #NEO-3841 đã giao',
       description:
-          'Đơn hàng của bạn đã được giao tận tay. Hãy để lại đánh giá để nhận ngay +50 Xu NÉORA.',
+          'Đơn hàng đã được đánh dấu là đã giao trong bản demo. Bạn có thể thử viết đánh giá để nhận xu mẫu.',
       timeLabel: 'Hôm qua',
       iconEmoji: '📦',
       iconBackgroundValue: 0xFFEDF2ED,
@@ -67,10 +80,19 @@ class MockNotificationRepository implements NotificationRepository {
     _items = _items
         .map((item) => item.id == id ? item.copyWith(isRead: true) : item)
         .toList();
+    _persistReadState();
   }
 
   @override
   void markAllAsRead() {
     _items = _items.map((item) => item.copyWith(isRead: true)).toList();
+    _persistReadState();
+  }
+
+  void _persistReadState() {
+    _store?.write(
+      _readKey,
+      _items.where((item) => item.isRead).map((item) => item.id).toList(),
+    );
   }
 }

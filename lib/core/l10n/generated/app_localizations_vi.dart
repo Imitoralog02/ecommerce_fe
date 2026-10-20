@@ -202,7 +202,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get continueWithLabel => 'HOẶC TIẾP TỤC VỚI';
 
   @override
-  String get fastDeliveryPerk => 'Giao nhanh 2h';
+  String get fastDeliveryPerk => 'Giao hỏa tốc';
 
   @override
   String get returnsPerk => 'Đổi trả 30 ngày';

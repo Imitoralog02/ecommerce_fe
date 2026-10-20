@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../address/domain/entities/address_entity.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
+import '../../../checkout/domain/entities/checkout_selection.dart';
 
 enum OrderStatus {
   pendingConfirmation,
@@ -70,6 +71,7 @@ class OrderEntity {
   final String? trackingNumber;
   final String? estimatedDelivery;
   final String paymentMethod;
+  final ShippingType shippingType;
   final String? couponCode;
   final int coinReward;
   final String? giftDescription;
@@ -88,6 +90,7 @@ class OrderEntity {
     this.trackingNumber,
     this.estimatedDelivery,
     this.paymentMethod = 'Thanh toán khi nhận hàng (COD)',
+    this.shippingType = ShippingType.standard,
     this.couponCode,
     this.coinReward = 0,
     this.giftDescription,
@@ -130,6 +133,7 @@ class OrderEntity {
     String? trackingNumber,
     String? estimatedDelivery,
     String? paymentMethod,
+    ShippingType? shippingType,
     String? couponCode,
     int? coinReward,
     String? giftDescription,
@@ -148,6 +152,7 @@ class OrderEntity {
       trackingNumber: trackingNumber ?? this.trackingNumber,
       estimatedDelivery: estimatedDelivery ?? this.estimatedDelivery,
       paymentMethod: paymentMethod ?? this.paymentMethod,
+      shippingType: shippingType ?? this.shippingType,
       couponCode: couponCode ?? this.couponCode,
       coinReward: coinReward ?? this.coinReward,
       giftDescription: giftDescription ?? this.giftDescription,

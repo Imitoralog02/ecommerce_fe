@@ -46,11 +46,15 @@ flutter analyze
 flutter test
 ```
 
+Workflow [Flutter CI](.github/workflows/flutter-ci.yml) kiểm tra format, analyze, test và build APK debug cho mỗi lần push hoặc mở pull request. Workflow dùng Flutter 3.44.0; APK debug chỉ để kiểm tra khả năng build, không phải bản phát hành đã ký.
+
 Khi sửa nội dung trong `lib/l10n/app_vi.arb` hoặc `lib/l10n/app_en.arb`, chạy `flutter gen-l10n` để cập nhật mã trong `lib/core/l10n/generated/`.
 
 ## Dữ liệu và giới hạn hiện tại
 
-Các repository `Mock...Repository` cung cấp catalog, tài khoản, thông báo, thanh toán và các luồng khác. Đăng nhập, tìm kiếm bằng ảnh, chat hỗ trợ, kiểm tra kết nối và đặt hàng đang được mô phỏng. Thao tác đặt hàng không gửi giao dịch tới máy chủ hoặc cổng thanh toán. Onboarding, cài đặt, giỏ hàng, địa chỉ, yêu thích, đơn hàng mẫu và ví voucher/xu được lưu bằng `shared_preferences`; các state mock khác chỉ tồn tại trong phiên chạy ứng dụng. Dữ liệu cục bộ này chưa phải kho lưu trữ an toàn cho thông tin cá nhân hoặc thanh toán thật.
+Các repository `Mock...Repository` cung cấp catalog, tài khoản, thông báo, thanh toán và các luồng khác. Đăng nhập, tìm kiếm bằng ảnh, chat hỗ trợ, kiểm tra kết nối và đặt hàng đang được mô phỏng. Thao tác đặt hàng không gửi giao dịch tới máy chủ hoặc cổng thanh toán. Onboarding, cài đặt, giỏ hàng, địa chỉ, yêu thích, đơn hàng, ví voucher/xu, đánh giá, yêu cầu đổi trả, thông báo đã đọc, lịch sử xem/tìm kiếm, chat và phương thức thanh toán mẫu được lưu bằng `shared_preferences`. Dữ liệu cục bộ này chưa phải kho lưu trữ an toàn cho thông tin cá nhân hoặc thanh toán thật, và các bước đặt đơn–ví–giỏ chưa có giao dịch nguyên tử.
+
+Chọn ảnh trong tìm kiếm, đánh giá hoặc đổi trả hiện lấy **ảnh minh họa có sẵn trong app**; ảnh đánh giá/đổi trả khớp với sản phẩm được chọn. Tìm kiếm ảnh chỉ so khớp các asset trong catalog mẫu. Để thử màn mất kết nối, mở **Cá nhân → Cài đặt → Trạng thái demo** và bật **Mô phỏng mất kết nối**. Nút **Thử lại** giữ nguyên màn khi chế độ mẫu còn bật; **Tiếp tục dùng app** sẽ thoát. Trạng thái này chỉ tồn tại trong phiên chạy, không kiểm tra mạng thật và không xóa dữ liệu mẫu.
 
 Ví điện tử và thẻ hiển thị dữ liệu mẫu, có thể quản lý trên màn phương thức thanh toán và chọn tại checkout. Ứng dụng chỉ dùng 4 số cuối cho thẻ thêm vào; không nhận số thẻ đầy đủ hoặc CVV. Với catalog tĩnh của bản mock, mỗi biến thể trong giỏ giữ giá từ lần thêm đầu tiên, còn đơn giữ giá tại lúc đặt. Sản phẩm mới được thêm sau khi catalog thay đổi sẽ dùng giá mới; sản phẩm cũ còn trong giỏ vẫn dùng snapshot đã lưu, kể cả khi không còn trong catalog mới.
 

@@ -1,4 +1,4 @@
-enum TrackingStage { processing, shipping, delivered }
+enum TrackingStage { processing, shipping, delivered, cancelled }
 
 class TrackingSnapshot {
   const TrackingSnapshot({
@@ -13,6 +13,8 @@ class TrackingSnapshot {
   final String statusLabel;
   final String deliveryMethod;
 
-  bool isStepDone(TrackingStage step) => step.index <= stage.index;
-  bool isStepActive(TrackingStage step) => step == stage;
+  bool isStepDone(TrackingStage step) =>
+      stage != TrackingStage.cancelled && step.index <= stage.index;
+  bool isStepActive(TrackingStage step) =>
+      stage != TrackingStage.cancelled && step == stage;
 }

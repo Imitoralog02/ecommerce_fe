@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
+import '../../../wallet/presentation/viewmodels/wallet_viewmodel.dart';
 import '../../di/order_providers.dart';
 import '../../domain/entities/order_entity.dart';
 
@@ -34,10 +35,22 @@ class OrderViewModel extends Notifier<OrderState> {
     state = state.copyWith(orders: repository.getOrders());
   }
 
-  void cancelOrder(String orderId) {
+  bool cancelOrder(String orderId) {
+    final order = state.findById(orderId);
+    if (order == null ||
+        (order.status != OrderStatus.pendingConfirmation &&
+            order.status != OrderStatus.processing)) {
+      return false;
+    }
     final repository = ref.read(orderRepositoryProvider)
       ..updateStatus(orderId, OrderStatus.cancelled);
     state = state.copyWith(orders: repository.getOrders());
+    if (order.isUserPlaced) {
+      ref
+          .read(walletViewModelProvider.notifier)
+          .reverseOrderVoucher(order.id, order.couponCode, order.coinReward);
+    }
+    return true;
   }
 
   void buyAgain(OrderEntity order) {

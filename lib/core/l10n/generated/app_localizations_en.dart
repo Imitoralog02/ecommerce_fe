@@ -203,7 +203,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueWithLabel => 'OR CONTINUE WITH';
 
   @override
-  String get fastDeliveryPerk => '2-hour delivery';
+  String get fastDeliveryPerk => 'Express delivery';
 
   @override
   String get returnsPerk => '30-day returns';

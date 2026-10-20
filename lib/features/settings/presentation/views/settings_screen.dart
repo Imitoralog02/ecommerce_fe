@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
+import '../../../../core/connectivity/presentation/demo_connectivity_mode.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../address/presentation/views/address_book_screen.dart';
@@ -399,10 +400,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: SingleChildScrollView(
                 physics: AlwaysScrollableScrollPhysics(),
                 child: Text(
-                  '1. Cam kết chất lượng NÉORA: Mọi sản phẩm thời trang được phân phối trên NÉORA đều đảm bảo chất lượng may đo cao cấp và nguồn gốc minh bạch.\n\n'
-                  '2. Chính sách đổi trả 30 ngày: Khách hàng có quyền đổi size hoặc đổi mẫu trong vòng 30 ngày kể từ ngày nhận hàng với sự hỗ trợ của shipper đến tận nhà.\n\n'
-                  '3. Bảo mật thông tin: NÉORA cam kết mã hoá thông tin thanh toán, thẻ ngân hàng và bảo vệ quyền riêng tư tuyệt đối theo quy chuẩn quốc tế PCI-DSS.\n\n'
-                  '4. Chương trình Hội viên NÉORA Club: Điểm thưởng tích luỹ được áp dụng trực tiếp cho các đơn hàng tiếp theo và không có giá trị quy đổi thành tiền mặt ngoài ứng dụng.',
+                  '1. Phiên bản demo: Sản phẩm, đơn hàng, thanh toán và dịch vụ trong ứng dụng hiện là dữ liệu mẫu; không phát sinh giao dịch thật.\n\n'
+                  '2. Đổi trả: Bạn có thể thử tạo yêu cầu đổi trả trong 30 ngày theo chính sách hiển thị. Yêu cầu chỉ được lưu cục bộ; chưa có giao nhận hoặc hoàn tiền thực tế.\n\n'
+                  '3. Dữ liệu cục bộ: Ứng dụng lưu dữ liệu demo trên thiết bị. Không nhập thông tin thẻ hoặc dữ liệu cá nhân thật vào bản mẫu.\n\n'
+                  '4. Hội viên NÉORA Club: Xu và voucher mẫu dùng để thử tính giá đơn trong ứng dụng, không quy đổi thành tiền mặt.',
                   style: TextStyle(
                     fontSize: 13.5,
                     color: AppColors.textSecondary,
@@ -588,6 +589,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 20),
 
+          _buildSectionHeader('TRẠNG THÁI DEMO'),
+          _buildCardWrapper([
+            _buildSwitchTile(
+              icon: Icons.wifi_off_rounded,
+              title: 'Mô phỏng mất kết nối',
+              subtitle: 'Bật để xem màn offline; dữ liệu mẫu vẫn còn',
+              value: ref.watch(demoConnectivityModeProvider),
+              onChanged: (value) {
+                ref
+                    .read(demoConnectivityModeProvider.notifier)
+                    .setOffline(value);
+                if (value && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ]),
+
+          const SizedBox(height: 20),
+
           // 4. Hệ thống & Pháp lý
           _buildSectionHeader('ỨNG DỤNG & ĐIỀU KHOẢN'),
           _buildCardWrapper([
@@ -767,7 +788,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: Column(children: children),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(children: children),
+        ),
       ),
     );
   }

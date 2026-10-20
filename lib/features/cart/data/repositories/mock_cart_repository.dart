@@ -32,7 +32,7 @@ class MockCartRepository implements CartRepository {
             (item) => item.id == 'prod_hoodie_lavender',
           ),
           selectedSize: 'L',
-          selectedColor: 'Lavender',
+          selectedColor: 'Be Cát',
         ),
       ],
     );

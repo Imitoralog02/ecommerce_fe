@@ -17,13 +17,13 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
     {
       'icon': '📦',
       'title': 'Đơn hàng & Giao vận',
-      'sub': 'Mã vận đơn, giao 2h',
+      'sub': 'Trạng thái đơn mẫu',
       'bg': Color(0xFFFBF4EB),
     },
     {
       'icon': '🔄',
       'title': 'Đổi trả & Hoàn tiền',
-      'sub': '30 ngày tận nhà',
+      'sub': 'Yêu cầu đổi trả mẫu',
       'bg': Color(0xFFEDF4ED),
     },
     {
@@ -35,7 +35,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
     {
       'icon': '💳',
       'title': 'Thanh toán & Hoá đơn',
-      'sub': 'COD, MoMo, VAT',
+      'sub': 'Phương thức thanh toán mẫu',
       'bg': Color(0xFFEFF5FB),
     },
   ];
@@ -44,49 +44,34 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
     {
       'q': 'Làm thế nào để chọn size trang phục chuẩn xác?',
       'a':
-          'Bảng kích cỡ của NÉORA được may đo chuẩn phom dáng Á Đông. Bạn có thể tham khảo bảng Size Chart tại từng sản phẩm hoặc bấm "Chat với Stylist" để được chuyên viên tư vấn trực tiếp theo số đo chiều cao & cân nặng của bạn nhé.',
+          'Bạn có thể tham khảo bảng size tại từng sản phẩm hoặc thử phần chat tư vấn mẫu theo chiều cao và cân nặng. Bản demo chưa kết nối chuyên viên thật.',
     },
     {
       'q': 'Chính sách đổi trả 30 ngày hoạt động như thế nào?',
       'a':
-          'NÉORA hỗ trợ đổi size, đổi mẫu hoàn toàn miễn phí tận nhà trong vòng 30 ngày kể từ khi nhận hàng. Sản phẩm chỉ cần còn nguyên tem mác và chưa qua giặt ủi. Shipper sẽ mang sản phẩm mới đến và thu hồi sản phẩm cũ.',
+          'Chính sách hiển thị trong bản demo là đổi trả trong 30 ngày với sản phẩm còn nguyên tem mác. Yêu cầu đổi trả hiện chỉ được lưu cục bộ, chưa gửi đến nhân viên hoặc đơn vị vận chuyển.',
     },
     {
       'q': 'Thời gian giao hàng tiêu chuẩn và giao hỏa tốc?',
       'a':
-          'NÉORA hỗ trợ giao hỏa tốc trong 2 giờ tại nội thành Hà Nội & TP.HCM. Với các tỉnh thành khác, thời gian giao hàng từ 2 - 3 ngày làm việc. Tất cả đơn hàng từ 300.000₫ đều được miễn phí vận chuyển.',
+          'Trong bản demo, giao tiêu chuẩn dự kiến 2–3 ngày làm việc; giao hỏa tốc có thời gian dự kiến riêng khi đặt hàng. Phí giao và ưu đãi được hiển thị tại checkout trước khi xác nhận đơn.',
     },
     {
       'q': 'Làm sao để tích luỹ và sử dụng Xu NÉORA?',
       'a':
-          'Bạn nhận ngay 50 xu mỗi ngày khi bấm "Điểm danh" tại Ví Voucher, và được hoàn 5% giá trị mỗi đơn hàng hoàn tất. 1.000 xu tương đương 1.000₫ và có thể dùng khấu trừ trực tiếp khi thanh toán đơn hàng.',
+          'Trong bản demo, bạn nhận 50 xu mỗi ngày khi bấm "Điểm danh" tại Ví Voucher. Xu và ưu đãi chỉ dùng để thử tính giá đơn mẫu, không có giá trị tiền thật.',
     },
     {
-      'q': 'Tôi có được kiểm tra sản phẩm trước khi thanh toán không?',
+      'q': 'Tôi có thể kiểm tra hàng trước khi trả tiền không?',
       'a':
-          'Có, NÉORA luôn đồng kiểm sản phẩm khi giao hàng. Bạn hoàn toàn có thể mở hộp kiểm tra chất lượng vải, đường may và mẫu mã trước khi thanh toán tiền cho nhân viên giao hàng.',
+          'Bản demo cho phép chọn hình thức trả tiền khi nhận hàng để thử luồng đặt đơn. Hiện chưa có giao nhận, đồng kiểm hoặc thu tiền thực tế.',
     },
   ];
 
-  void _callHotline() {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.phone_in_talk_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 10),
-            Text(
-              'Đang kết nối Hotline NÉORA: 1900 8821...',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.brandBlack,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        duration: const Duration(seconds: 3),
-      ),
+  void _openDemoChat() {
+    Navigator.push(
+      context,
+      AppRouter.page(builder: (_) => const LiveChatScreen()),
     );
   }
 
@@ -180,7 +165,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
                             Text('✨', style: TextStyle(fontSize: 11)),
                             SizedBox(width: 4),
                             Text(
-                              'NÉORA CONCIERGE 24/7',
+                              'NÉORA · TRỢ GIÚP DEMO',
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w900,
@@ -211,7 +196,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Đội ngũ Stylist và chuyên viên chăm sóc khách hàng của NÉORA luôn sẵn sàng phục vụ bạn.',
+                    'Khám phá câu hỏi thường gặp và thử trò chuyện với Stylist mẫu.',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
@@ -398,7 +383,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
             ),
             const SizedBox(height: 24),
 
-            // 4. Hotline Contact Card
+            // 4. Demo chat entry
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -434,7 +419,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Hotline CSKH: 1900 8821',
+                          'Tư vấn phối đồ mẫu',
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w900,
@@ -443,7 +428,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Hỗ trợ từ 8:30 – 22:00 tất cả các ngày trong tuần',
+                          'Phản hồi tự động; chưa kết nối nhân viên thật',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
@@ -454,7 +439,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: _callHotline,
+                    onPressed: _openDemoChat,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.brandBlack,
                       foregroundColor: Colors.white,
@@ -469,7 +454,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
                       elevation: 0,
                     ),
                     child: const Text(
-                      'Gọi ngay',
+                      'Mở chat',
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w800,
@@ -506,15 +491,10 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
           width: double.infinity,
           height: 52,
           child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                AppRouter.page(builder: (_) => const LiveChatScreen()),
-              );
-            },
+            onPressed: _openDemoChat,
             icon: const Text('💬', style: TextStyle(fontSize: 16)),
             label: const Text(
-              'Trò chuyện trực tiếp với Stylist',
+              'Thử chat với Stylist mẫu',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
             ),
             style: ElevatedButton.styleFrom(

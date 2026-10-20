@@ -21,6 +21,7 @@ import 'package:ecommerce_fe/features/cart/presentation/viewmodels/cart_viewmode
 import 'package:ecommerce_fe/features/profile/presentation/views/profile_screen.dart';
 import 'package:ecommerce_fe/features/cart/presentation/views/cart_screen.dart';
 import 'package:ecommerce_fe/features/checkout/presentation/views/checkout_screen.dart';
+import 'package:ecommerce_fe/features/wallet/presentation/views/voucher_wallet_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +42,12 @@ void main() {
     await (FontLoader(
       'MaterialIcons',
     )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
-    for (final font in ['PlayfairDisplay', 'PlusJakartaSans', 'NotoSerif', 'Inter']) {
+    for (final font in [
+      'PlayfairDisplay',
+      'PlusJakartaSans',
+      'NotoSerif',
+      'Inter',
+    ]) {
       await (FontLoader(
         font,
       )..addFont(rootBundle.load('assets/fonts/$font.ttf'))).load();
@@ -133,6 +139,54 @@ void main() {
             await file.writeAsBytes(bytes!.buffer.asUint8List());
             image.dispose();
           });
+        }
+        if (screen == 'home') {
+          await tester.drag(
+            find.byType(CustomScrollView),
+            const Offset(0, -4000),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('Lên đầu trang'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+
+          if (const bool.fromEnvironment('EXPORT_PREVIEWS') &&
+              size.width == 390) {
+            await tester.runAsync(() async {
+              final boundary =
+                  key.currentContext!.findRenderObject()!
+                      as RenderRepaintBoundary;
+              final image = await boundary.toImage(pixelRatio: 1);
+              final bytes = await image.toByteData(
+                format: ui.ImageByteFormat.png,
+              );
+              final file = File('build/editorial-previews/home_bottom.png');
+              await file.parent.create(recursive: true);
+              await file.writeAsBytes(bytes!.buffer.asUint8List());
+              image.dispose();
+            });
+          }
+
+          await tester.tap(find.text('Xem gợi ý phối đồ'));
+          await tester.pumpAndSettle();
+          final openedLookbook = tester.widget<LookbookScreen>(
+            find.byType(LookbookScreen),
+          );
+          expect(openedLookbook.initialOccasion, 'Đi chơi');
+          tester.state<NavigatorState>(find.byType(Navigator)).pop();
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Ưu đãi cho tủ đồ của bạn'));
+          await tester.pumpAndSettle();
+          expect(find.byType(VoucherWalletScreen), findsOneWidget);
+          tester.state<NavigatorState>(find.byType(Navigator)).pop();
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Lên đầu trang'));
+          await tester.pumpAndSettle();
+          final scrollable = tester.state<ScrollableState>(
+            find.byType(Scrollable).first,
+          );
+          expect(scrollable.position.pixels, 0);
         }
         await tester.pumpWidget(const SizedBox.shrink());
         container.dispose();

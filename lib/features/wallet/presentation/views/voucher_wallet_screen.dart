@@ -584,16 +584,19 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
                         : const Color(0xFFDFC59E),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    state.checkedInToday
-                        ? '✓ Đã điểm danh hôm nay (+50 xu)'
-                        : 'Điểm danh ngay · Nhận +50 Xu mỗi ngày ✨',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w900,
-                      color: state.checkedInToday
-                          ? Colors.white70
-                          : Colors.white,
+                  Flexible(
+                    child: Text(
+                      state.checkedInToday
+                          ? '✓ Đã điểm danh hôm nay (+50 xu)'
+                          : 'Điểm danh ngay · Nhận +50 Xu mỗi ngày ✨',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        color: state.checkedInToday
+                            ? Colors.white70
+                            : Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -795,26 +798,35 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
 
                       // Footer with Expiry & Actions
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.access_time_rounded,
-                                size: 12,
-                                color: AppColors.textMuted,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                voucher.expiryDate,
-                                style: const TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w700,
+                          Expanded(
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.access_time_rounded,
+                                  size: 12,
                                   color: AppColors.textMuted,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Tooltip(
+                                    message: voucher.expiryDate,
+                                    child: Text(
+                                      voucher.expiryDate,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 6),
 
                           // Action Buttons
                           Row(

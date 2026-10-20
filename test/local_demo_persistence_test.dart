@@ -5,6 +5,7 @@ import 'package:ecommerce_fe/features/cart/data/repositories/shared_preferences_
 import 'package:ecommerce_fe/features/cart/di/cart_providers.dart';
 import 'package:ecommerce_fe/features/cart/presentation/viewmodels/cart_viewmodel.dart';
 import 'package:ecommerce_fe/features/checkout/presentation/viewmodels/checkout_viewmodel.dart';
+import 'package:ecommerce_fe/features/checkout/domain/entities/checkout_selection.dart';
 import 'package:ecommerce_fe/features/home/data/repositories/mock_product_repository.dart';
 import 'package:ecommerce_fe/features/orders/data/repositories/shared_preferences_order_repository.dart';
 import 'package:ecommerce_fe/features/orders/di/order_providers.dart';
@@ -57,8 +58,8 @@ void main() {
       price: 123456,
     );
     final cart = first.read(cartViewModelProvider.notifier);
-    cart.addToCart(product, 'L', 'Rose');
-    cart.addToCart(product, 'M', 'Blue');
+    cart.addToCart(product, 'L', 'Kem Be');
+    cart.addToCart(product, 'M', 'Camel Nâu');
     expect(cart.applyCoupon('NEO10'), isTrue);
     await Future<void>.delayed(Duration.zero);
     first.dispose();
@@ -68,7 +69,7 @@ void main() {
     final restored = second.read(cartViewModelProvider);
     expect(restored.items, hasLength(2));
     expect(restored.items.first.product.price, 123456);
-    expect(restored.items.first.selectedColor, 'Rose');
+    expect(restored.items.first.selectedColor, 'Kem Be');
     expect(restored.items.last.selectedSize, 'M');
     expect(restored.appliedCoupon, 'NEO10');
     expect(restored.discount, greaterThan(0));
@@ -98,7 +99,10 @@ void main() {
     final first = _container(preferences);
     first
         .read(cartViewModelProvider.notifier)
-        .addToCart(MockProductRepository.mockCatalog.first, 'M', 'Rose');
+        .addToCart(MockProductRepository.mockCatalog.first, 'M', 'Kem Be');
+    first
+        .read(checkoutViewModelProvider.notifier)
+        .setShipping(ShippingType.standard);
     final order = await first
         .read(checkoutViewModelProvider.notifier)
         .placeOrder();
@@ -114,8 +118,9 @@ void main() {
     final restored = second.read(orderViewModelProvider).findById(order.id);
     expect(restored, isNotNull);
     expect(restored!.status, OrderStatus.cancelled);
-    expect(restored.items.single.selectedColor, 'Rose');
+    expect(restored.items.single.selectedColor, 'Kem Be');
     expect(restored.totalAmount, order.totalAmount);
+    expect(restored.shippingType, ShippingType.standard);
     expect(restored.shippingAddress.id, order.shippingAddress.id);
   });
 
@@ -185,4 +190,63 @@ void main() {
       order.coinReward,
     );
   });
+
+  test(
+    'cancelling a new order releases its voucher and coin reward once',
+    () async {
+      final preferences = await SharedPreferences.getInstance();
+      final first = _container(preferences);
+      final startingWallet = first.read(walletViewModelProvider);
+      first
+          .read(walletViewModelProvider.notifier)
+          .toggleSaveVoucher('v_coin_5p');
+      final cart = first.read(cartViewModelProvider.notifier);
+      cart.addToCart(MockProductRepository.mockCatalog.first);
+      expect(cart.applyCoupon('COINBACK5'), isTrue);
+      final order = await first
+          .read(checkoutViewModelProvider.notifier)
+          .placeOrder();
+      expect(order, isNotNull);
+      final orders = first.read(orderViewModelProvider.notifier);
+      expect(orders.cancelOrder(order!.id), isTrue);
+      expect(orders.cancelOrder(order.id), isFalse);
+      expect(
+        first.read(walletViewModelProvider).coinBalance,
+        startingWallet.coinBalance,
+      );
+      expect(
+        first.read(walletViewModelProvider).memberTier,
+        startingWallet.memberTier,
+      );
+      expect(
+        first
+            .read(walletViewModelProvider)
+            .vouchers
+            .firstWhere((v) => v.code == 'COINBACK5')
+            .isUsed,
+        isFalse,
+      );
+      await Future<void>.delayed(Duration.zero);
+      first.dispose();
+
+      final second = _container(preferences);
+      addTearDown(second.dispose);
+      expect(
+        second.read(orderViewModelProvider).findById(order.id)?.status,
+        OrderStatus.cancelled,
+      );
+      expect(
+        second.read(walletViewModelProvider).coinBalance,
+        startingWallet.coinBalance,
+      );
+      expect(
+        second
+            .read(walletViewModelProvider)
+            .vouchers
+            .firstWhere((v) => v.code == 'COINBACK5')
+            .isUsed,
+        isFalse,
+      );
+    },
+  );
 }

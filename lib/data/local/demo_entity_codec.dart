@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../features/address/domain/entities/address_entity.dart';
 import '../../features/cart/domain/entities/cart_item_entity.dart';
+import '../../features/checkout/domain/entities/checkout_selection.dart';
 import '../../features/home/domain/entities/product_entity.dart';
 import '../../features/orders/domain/entities/order_entity.dart';
 
@@ -128,6 +129,7 @@ abstract final class DemoEntityCodec {
     'trackingNumber': order.trackingNumber,
     'estimatedDelivery': order.estimatedDelivery,
     'paymentMethod': order.paymentMethod,
+    'shippingType': order.shippingType.name,
     'couponCode': order.couponCode,
     'coinReward': order.coinReward,
     'giftDescription': order.giftDescription,
@@ -149,6 +151,12 @@ abstract final class DemoEntityCodec {
       trackingNumber: map['trackingNumber'] as String?,
       estimatedDelivery: map['estimatedDelivery'] as String?,
       paymentMethod: _string(map, 'paymentMethod'),
+      shippingType: ShippingType.values.byName(
+        map['shippingType'] as String? ??
+            ((map['shippingFee'] as num?)?.toDouble() == 30000
+                ? ShippingType.express.name
+                : ShippingType.standard.name),
+      ),
       couponCode: map['couponCode'] as String?,
       coinReward: (map['coinReward'] as num?)?.toInt() ?? 0,
       giftDescription: map['giftDescription'] as String?,

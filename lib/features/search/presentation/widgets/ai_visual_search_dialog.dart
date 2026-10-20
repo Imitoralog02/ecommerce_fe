@@ -23,7 +23,7 @@ class AIVisualSearchDialog extends ConsumerStatefulWidget {
 
 class _AIVisualSearchDialogState extends ConsumerState<AIVisualSearchDialog>
     with SingleTickerProviderStateMixin {
-  static const _sourceImagePath = 'assets/images/real/onb_shopping.jpg';
+  static const _sourceImagePath = 'assets/images/real/p_dress.jpg';
   late AnimationController _scanController;
 
   @override
@@ -111,7 +111,7 @@ class _AIVisualSearchDialogState extends ConsumerState<AIVisualSearchDialog>
                         Text('✨', style: TextStyle(fontSize: 11)),
                         SizedBox(width: 4),
                         Text(
-                          'AI FASHION LENS',
+                          'TÌM ẢNH MẪU · DEMO',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
@@ -245,7 +245,7 @@ class _AIVisualSearchDialogState extends ConsumerState<AIVisualSearchDialog>
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Đã nhận diện: ${result.detectedLabel} (Độ khớp: ${(result.confidence * 100).round()}%)',
+                                  'Ảnh mẫu: ${result.detectedLabel}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -272,8 +272,8 @@ class _AIVisualSearchDialogState extends ConsumerState<AIVisualSearchDialog>
                 alignment: Alignment.centerLeft,
                 child: Text(
                   isScanned
-                      ? 'SẢN PHẨM TƯƠNG ĐỒNG TRONG BST'
-                      : 'Đang phân tích hình ảnh AI...',
+                      ? 'SẢN PHẨM KHỚP ẢNH MẪU'
+                      : 'Đang so khớp ảnh mẫu...',
                   style: const TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
@@ -315,6 +315,14 @@ class _AIVisualSearchDialogState extends ConsumerState<AIVisualSearchDialog>
                       label: const Text('Thử lại'),
                     ),
                   ],
+                ),
+              )
+            else if (result != null && result.products.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Text(
+                  'Chưa có sản phẩm nào trong bộ sưu tập mock khớp ảnh mẫu này.',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
                 ),
               )
             else if (result != null)

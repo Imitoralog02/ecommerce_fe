@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -56,7 +56,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _skipToHome({int tabIndex = 0}) async {
     await ref.read(onboardingRepositoryProvider).markOnboardingSeen();
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, AppRoutes.main, arguments: tabIndex);
+    Navigator.pushReplacementNamed(
+      context,
+      AppRoutes.main,
+      arguments: tabIndex,
+    );
   }
 
   Future<void> _startWithNeora() async {
@@ -594,4 +598,3 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 }
-

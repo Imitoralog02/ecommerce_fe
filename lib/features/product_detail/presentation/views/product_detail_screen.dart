@@ -17,6 +17,7 @@ import '../../../support/presentation/views/live_chat_screen.dart';
 import '../../../history/presentation/viewmodels/recently_viewed_viewmodel.dart';
 import '../widgets/size_guide_sheet.dart';
 import '../../../reviews/presentation/views/product_reviews_screen.dart';
+import '../../../reviews/presentation/viewmodels/review_viewmodel.dart';
 import '../../../shop/presentation/views/lookbook_screen.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
@@ -152,6 +153,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final product = widget.product;
+    final reviewState = ref.watch(reviewViewModelProvider(product.id));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -434,7 +436,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                             ),
                             const SizedBox(width: 3),
                             Text(
-                              '${product.rating}',
+                              reviewState
+                                  .averageRating(product)
+                                  .toStringAsFixed(1),
                               style: const TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w700,
@@ -443,7 +447,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '(${product.reviewCount} đánh giá)',
+                              '(${reviewState.totalCount(product)} đánh giá)',
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
@@ -711,7 +715,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                     ),
                     child: Column(
                       children: [
-                        _buildSizeRow('Cỡ', 'Vòng ngực', 'Dài áo', header: true),
+                        _buildSizeRow(
+                          'Cỡ',
+                          'Vòng ngực',
+                          'Dài áo',
+                          header: true,
+                        ),
                         const Divider(height: 14, color: AppColors.divider),
                         _buildSizeRow('S', '88 - 92 cm', '66 cm'),
                         const SizedBox(height: 6),
@@ -732,8 +741,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    '• Giao tiêu chuẩn 2–4 ngày làm việc trên toàn quốc\n'
-                    '• Đổi trả dễ dàng trong 14 ngày nếu sản phẩm còn nguyên tem mác',
+                    '• Giao tiêu chuẩn dự kiến 2–3 ngày làm việc\n'
+                    '• Đổi trả trong 30 ngày nếu sản phẩm còn nguyên tem mác',
                     style: TextStyle(
                       fontSize: 12.5,
                       height: 1.6,

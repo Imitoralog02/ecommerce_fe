@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/connectivity/presentation/demo_connectivity_mode.dart';
 import '../../../../core/widgets/floating_liquid_glass_dock.dart';
+import '../../../../core/widgets/no_internet_screen.dart';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
 import '../../../cart/presentation/views/cart_screen.dart';
 import '../../../home/presentation/views/home_screen.dart';
@@ -36,6 +38,7 @@ class _MainNavScreenState extends ConsumerState<MainNavScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isSimulatedOffline = ref.watch(demoConnectivityModeProvider);
     final cartState = ref.watch(cartViewModelProvider);
     final unreadNotifications = ref.watch(unreadNotificationCountProvider);
 
@@ -59,13 +62,22 @@ class _MainNavScreenState extends ConsumerState<MainNavScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: IndexedStack(index: _currentIndex, children: screens),
-        bottomNavigationBar: FloatingLiquidGlassDock(
-          selectedIndex: _currentIndex,
-          cartItemCount: cartState.totalItemCount,
-          unreadNotificationsCount: unreadNotifications,
-          onItemSelected: _selectTab,
-        ),
+        body: isSimulatedOffline
+            ? NoInternetScreen(
+                isDemoMode: true,
+                onExitDemo: () => ref
+                    .read(demoConnectivityModeProvider.notifier)
+                    .setOffline(false),
+              )
+            : IndexedStack(index: _currentIndex, children: screens),
+        bottomNavigationBar: isSimulatedOffline
+            ? null
+            : FloatingLiquidGlassDock(
+                selectedIndex: _currentIndex,
+                cartItemCount: cartState.totalItemCount,
+                unreadNotificationsCount: unreadNotifications,
+                onItemSelected: _selectTab,
+              ),
       ),
     );
   }
