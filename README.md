@@ -1,6 +1,6 @@
 # NÉORA — ứng dụng mua sắm thời trang
 
-NÉORA là ứng dụng thương mại thời trang được xây dựng bằng Flutter. Dự án hiện tập trung vào trải nghiệm giao diện và luồng mua sắm: khám phá sản phẩm, tìm kiếm, giỏ hàng, đặt hàng, theo dõi đơn và quản lý tài khoản. Dữ liệu nghiệp vụ chủ yếu đến từ các repository giả lập trong ứng dụng; dự án chưa kết nối backend hay cổng thanh toán thật.
+NÉORA là ứng dụng thương mại thời trang được xây dựng bằng Flutter. Đăng nhập, catalog, giỏ hàng, địa chỉ, wishlist, đặt COD, lịch sử đơn và thông báo đã gọi backend qua API Gateway. Các tính năng ngoài phạm vi COD vẫn là demo; chưa có cổng thanh toán điện tử thật.
 
 Tiến độ và các việc cần làm được theo dõi trong [FRONTEND_ROADMAP.md](FRONTEND_ROADMAP.md).
 
@@ -39,6 +39,8 @@ Thanh điều hướng chính gồm **Trang chủ**, **Cửa hàng**, **Thông b
 
 3. Nếu có nhiều thiết bị, dùng `flutter devices` rồi `flutter run -d <device-id>`. Dự án có thư mục cấu hình Android, iOS, web, Windows, macOS và Linux; cần công cụ build tương ứng cho từng nền tảng (ví dụ Xcode cho iOS/macOS).
 
+Khởi động backend và hạ tầng theo README của `ecommerce_be` trước khi dùng các luồng API. URL mặc định `http://10.0.2.2:8080/api/v1` dành cho Android emulator. Đổi URL bằng `--dart-define=API_BASE_URL=https://<gateway>/api/v1` khi chạy trên thiết bị hoặc môi trường khác. Android debug cho phép HTTP local; bản phát hành nên dùng HTTPS. Đăng nhập để tải giỏ, địa chỉ, wishlist, đơn và thông báo. Refresh token được lưu bằng `flutter_secure_storage`.
+
 Các lệnh kiểm tra:
 
 ```bash
@@ -52,11 +54,11 @@ Khi sửa nội dung trong `lib/l10n/app_vi.arb` hoặc `lib/l10n/app_en.arb`, c
 
 ## Dữ liệu và giới hạn hiện tại
 
-Các repository `Mock...Repository` cung cấp catalog, tài khoản, thông báo, thanh toán và các luồng khác. Đăng nhập, tìm kiếm bằng ảnh, chat hỗ trợ, kiểm tra kết nối và đặt hàng đang được mô phỏng. Thao tác đặt hàng không gửi giao dịch tới máy chủ hoặc cổng thanh toán. Onboarding, cài đặt, giỏ hàng, địa chỉ, yêu thích, đơn hàng, ví voucher/xu, đánh giá, yêu cầu đổi trả, thông báo đã đọc, lịch sử xem/tìm kiếm, chat và phương thức thanh toán mẫu được lưu bằng `shared_preferences`. Dữ liệu cục bộ này chưa phải kho lưu trữ an toàn cho thông tin cá nhân hoặc thanh toán thật, và các bước đặt đơn–ví–giỏ chưa có giao dịch nguyên tử.
+Các repository `Remote...Repository` được dùng cho luồng mua sắm COD chính. Onboarding, một số cài đặt, ví voucher/xu, đánh giá, đổi trả, lịch sử xem/tìm kiếm, chat và phương thức thanh toán mẫu vẫn dùng mock hoặc `shared_preferences`. Quên mật khẩu, tìm kiếm bằng ảnh, chat hỗ trợ và kiểm tra kết nối vẫn là demo. Backend chưa hỗ trợ voucher, xu hay thanh toán điện tử; các lựa chọn này bị khóa ở checkout API. Dữ liệu local còn lại chưa phải kho lưu trữ an toàn cho thông tin cá nhân hoặc thanh toán thật.
 
 Chọn ảnh trong tìm kiếm, đánh giá hoặc đổi trả hiện lấy **ảnh minh họa có sẵn trong app**; ảnh đánh giá/đổi trả khớp với sản phẩm được chọn. Tìm kiếm ảnh chỉ so khớp các asset trong catalog mẫu. Để thử màn mất kết nối, mở **Cá nhân → Cài đặt → Trạng thái demo** và bật **Mô phỏng mất kết nối**. Nút **Thử lại** giữ nguyên màn khi chế độ mẫu còn bật; **Tiếp tục dùng app** sẽ thoát. Trạng thái này chỉ tồn tại trong phiên chạy, không kiểm tra mạng thật và không xóa dữ liệu mẫu.
 
-Ví điện tử và thẻ hiển thị dữ liệu mẫu, có thể quản lý trên màn phương thức thanh toán và chọn tại checkout. Ứng dụng chỉ dùng 4 số cuối cho thẻ thêm vào; không nhận số thẻ đầy đủ hoặc CVV. Với catalog tĩnh của bản mock, mỗi biến thể trong giỏ giữ giá từ lần thêm đầu tiên, còn đơn giữ giá tại lúc đặt. Sản phẩm mới được thêm sau khi catalog thay đổi sẽ dùng giá mới; sản phẩm cũ còn trong giỏ vẫn dùng snapshot đã lưu, kể cả khi không còn trong catalog mới.
+Ví điện tử và thẻ vẫn hiển thị dữ liệu mẫu trong màn quản lý nhưng không dùng được khi đặt đơn COD thật. Ứng dụng chỉ dùng 4 số cuối cho thẻ thêm vào; không nhận số thẻ đầy đủ hoặc CVV. Giỏ và đơn COD dùng giá do backend trả. `POST /orders` ban đầu có thể trả trạng thái chờ giữ hàng; ứng dụng đọc lại trạng thái và không coi `PENDING` là đã xác nhận.
 
 Voucher trong ví cần được lưu trước khi dùng. Các mã chỉ áp dụng khi đạt đơn tối thiểu, còn hạn và đáp ứng điều kiện hội viên, nhóm sản phẩm hoặc cách giao hàng ghi trên voucher. Một đơn dùng một mã; hoàn xu được cộng sau khi tạo đơn mock, quà tặng được ghi vào chi tiết đơn. Ngày hết hạn mẫu được tạo ở lần mở đầu và lưu cục bộ; sau ngày đó voucher không thể dùng.
 
@@ -64,7 +66,7 @@ Voucher trong ví cần được lưu trước khi dùng. Các mã chỉ áp d�
 
 Flash sale mẫu chạy theo các khung giờ địa phương 09:00–12:00, 12:00–18:00, 18:00–21:00 và 21:00–00:00. Đồng hồ và số suất mẫu được tính theo thời gian, nên mở lại màn hình không đặt lại tiến trình. Giá flash sale hiển thị là giá catalog được đưa vào giỏ; chưa có dịch vụ tồn kho hay thông báo nhắc giờ thực.
 
-Muốn tích hợp backend, triển khai các interface trong `lib/features/<feature>/domain/repositories/` và thay provider tương ứng trong `di/`. Không đưa API key, khóa ký ứng dụng hoặc thông tin môi trường cá nhân vào Git.
+Các tính năng demo còn lại có thể được nối backend bằng repository tương ứng trong `lib/features/<feature>/domain/repositories/`. Không đưa API key, khóa ký ứng dụng hoặc thông tin môi trường cá nhân vào Git.
 
 ## Lưu ý về Git
 

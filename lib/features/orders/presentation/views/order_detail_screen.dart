@@ -69,10 +69,13 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              final cancelled = ref
+            onPressed: () async {
+              final cancelled = await ref
                   .read(orderViewModelProvider.notifier)
-                  .cancelOrder(_currentOrder.id);
+                  .cancelOrderAsync(_currentOrder.id);
+              if (!mounted) return;
+              if (!ctx.mounted) return;
+              final messenger = ScaffoldMessenger.of(context);
               if (cancelled) {
                 setState(() {
                   _currentOrder = _currentOrder.copyWith(
@@ -81,7 +84,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 });
               }
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
+              messenger.showSnackBar(
                 SnackBar(
                   content: Text(
                     cancelled

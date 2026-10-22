@@ -2,17 +2,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../home/domain/entities/product_entity.dart';
 import '../../di/wishlist_providers.dart';
+import '../../../../core/network/remote_repositories.dart';
 
 class WishlistState {
   const WishlistState({
     this.items = const [],
     this.selectedCategory = 'Tất cả',
     this.searchQuery = '',
+    this.errorMessage,
   });
 
   final List<ProductEntity> items;
   final String selectedCategory;
   final String searchQuery;
+  final String? errorMessage;
 
   Set<String> get favoriteIds => items.map((item) => item.id).toSet();
   bool isFavorite(String productId) => favoriteIds.contains(productId);
@@ -37,20 +40,39 @@ class WishlistState {
     List<ProductEntity>? items,
     String? selectedCategory,
     String? searchQuery,
+    String? errorMessage,
   }) => WishlistState(
     items: items ?? this.items,
     selectedCategory: selectedCategory ?? this.selectedCategory,
     searchQuery: searchQuery ?? this.searchQuery,
+    errorMessage: errorMessage,
   );
 }
 
 class WishlistViewModel extends Notifier<WishlistState> {
   @override
-  WishlistState build() =>
-      WishlistState(items: ref.read(wishlistRepositoryProvider).getItems());
+  WishlistState build() {
+    final repository = ref.read(wishlistRepositoryProvider);
+    if (repository is RemoteWishlistRepository) {
+      Future.microtask(() => refresh());
+    }
+    return WishlistState(items: repository.getItems());
+  }
 
   void _saveItems(List<ProductEntity> items) {
-    ref.read(wishlistRepositoryProvider).saveItems(items);
+    final repository = ref.read(wishlistRepositoryProvider);
+    if (repository is RemoteWishlistRepository) {
+      repository
+          .synchronize(items)
+          .then((remote) {
+            if (ref.mounted) state = state.copyWith(items: remote);
+          })
+          .catchError((Object error) {
+            if (ref.mounted) state = state.copyWith(errorMessage: '$error');
+          });
+    } else {
+      repository.saveItems(items);
+    }
     state = state.copyWith(items: items);
   }
 
@@ -76,8 +98,12 @@ class WishlistViewModel extends Notifier<WishlistState> {
   void clearAll() => _saveItems(const []);
 
   Future<void> refresh() async {
-    final items = await ref.read(wishlistRepositoryProvider).refresh();
-    state = state.copyWith(items: items);
+    try {
+      final items = await ref.read(wishlistRepositoryProvider).refresh();
+      if (ref.mounted) state = state.copyWith(items: items);
+    } catch (error) {
+      if (ref.mounted) state = state.copyWith(errorMessage: '$error');
+    }
   }
 }
 

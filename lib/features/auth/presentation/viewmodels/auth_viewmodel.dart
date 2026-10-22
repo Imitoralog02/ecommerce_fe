@@ -1,6 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/auth_providers.dart';
+import '../../../../core/network/remote_repositories.dart';
+import 'dart:async';
+import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
+import '../../../address/presentation/viewmodels/address_viewmodel.dart';
+import '../../../wishlist/presentation/viewmodels/wishlist_viewmodel.dart';
+import '../../../orders/presentation/viewmodels/order_viewmodel.dart';
+import '../../../notifications/presentation/viewmodels/notification_viewmodel.dart';
+import '../../../settings/presentation/viewmodels/settings_viewmodel.dart';
 export '../../di/auth_providers.dart';
 
 enum AuthTab { login, register, forgot }
@@ -38,7 +46,7 @@ class AuthState {
 
   const AuthState({
     this.currentTab = AuthTab.login,
-    this.email = 'demo@neora.vn',
+    this.email = '',
     this.password = '',
     this.confirmPassword = '',
     this.fullName = '',
@@ -95,7 +103,14 @@ class AuthState {
 class AuthViewModel extends Notifier<AuthState> {
   @override
   AuthState build() {
-    return const AuthState();
+    final repository = ref.read(authRepositoryProvider);
+    if (repository is RemoteAuthRepository && repository.api.isAuthenticated) {
+      Future.microtask(() => _loadProfile(repository));
+    }
+    return AuthState(
+      isAuthenticated:
+          repository is RemoteAuthRepository && repository.api.isAuthenticated,
+    );
   }
 
   void switchTab(AuthTab tab) {
@@ -141,7 +156,40 @@ class AuthViewModel extends Notifier<AuthState> {
   }
 
   void logout() {
+    final repository = ref.read(authRepositoryProvider);
+    if (repository is RemoteAuthRepository) {
+      unawaited(
+        repository
+            .logout()
+            .catchError((Object _) {})
+            .whenComplete(_invalidateSessionData),
+      );
+    }
     state = const AuthState();
+  }
+
+  void _invalidateSessionData() {
+    if (!ref.mounted) return;
+    ref.invalidate(cartViewModelProvider);
+    ref.invalidate(addressViewModelProvider);
+    ref.invalidate(wishlistViewModelProvider);
+    ref.invalidate(orderViewModelProvider);
+    ref.invalidate(notificationViewModelProvider);
+    ref.invalidate(settingsViewModelProvider);
+  }
+
+  Future<void> _loadProfile(RemoteAuthRepository repository) async {
+    try {
+      final profile = await repository.profile();
+      if (!ref.mounted) return;
+      ref
+          .read(settingsViewModelProvider.notifier)
+          .showRemoteProfile(
+            name: profile['fullName'] as String? ?? '',
+            email: profile['email'] as String? ?? '',
+            phone: profile['phone'] as String? ?? '',
+          );
+    } catch (_) {}
   }
 
   bool _isValidEmail(String email) {
@@ -275,6 +323,11 @@ class AuthViewModel extends Notifier<AuthState> {
       return false;
     }
     state = state.copyWith(isLoading: false, isAuthenticated: true);
+    _invalidateSessionData();
+    final repository = ref.read(authRepositoryProvider);
+    if (repository is RemoteAuthRepository) {
+      await _loadProfile(repository);
+    }
     return true;
   }
 }

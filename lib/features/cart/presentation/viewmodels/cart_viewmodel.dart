@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../di/cart_providers.dart';
 import '../../domain/entities/cart_snapshot.dart';
 import '../../domain/services/cart_pricing.dart';
@@ -10,6 +11,7 @@ import '../../../wallet/domain/entities/voucher_entity.dart';
 import '../../domain/entities/cart_item_entity.dart';
 
 class CartState {
+  final String? errorMessage;
   final List<CartItemEntity> items;
   final String? appliedCoupon;
   final double shippingFee;
@@ -18,6 +20,7 @@ class CartState {
   final bool firstOrder;
 
   const CartState({
+    this.errorMessage,
     required this.items,
     this.appliedCoupon,
     this.shippingFee = 0.0,
@@ -57,6 +60,7 @@ class CartState {
   }
 
   CartState copyWith({
+    String? errorMessage,
     List<CartItemEntity>? items,
     String? appliedCoupon,
     double? shippingFee,
@@ -66,6 +70,7 @@ class CartState {
     bool clearCoupon = false,
   }) {
     return CartState(
+      errorMessage: errorMessage,
       items: items ?? this.items,
       appliedCoupon: clearCoupon ? null : (appliedCoupon ?? this.appliedCoupon),
       shippingFee: shippingFee ?? this.shippingFee,
@@ -77,9 +82,25 @@ class CartState {
 }
 
 class CartViewModel extends Notifier<CartState> {
+  int _syncGeneration = 0;
   @override
   CartState build() {
     final repository = ref.read(cartRepositoryProvider);
+    if (repository is RemoteCartRepository) {
+      Future.microtask(() async {
+        try {
+          final snapshot = await repository.refresh();
+          if (ref.mounted) {
+            state = state.copyWith(
+              items: snapshot.items,
+              shippingFee: snapshot.shippingFee,
+            );
+          }
+        } catch (error) {
+          if (ref.mounted) state = state.copyWith(errorMessage: '$error');
+        }
+      });
+    }
     final snapshot = repository.load();
     final wallet = ref.read(walletRepositoryProvider).load();
     final firstOrder = !ref
@@ -100,6 +121,39 @@ class CartViewModel extends Notifier<CartState> {
   }
 
   void _emit(CartState next) {
+    final repository = ref.read(cartRepositoryProvider);
+    if (repository is RemoteCartRepository) {
+      state = next;
+      final generation = ++_syncGeneration;
+      repository
+          .synchronize(CartSnapshot(items: next.items))
+          .then((snapshot) {
+            if (ref.mounted && generation == _syncGeneration) {
+              state = state.copyWith(
+                items: snapshot.items,
+                shippingFee: snapshot.shippingFee,
+                errorMessage: '',
+              );
+            }
+          })
+          .catchError((Object error) async {
+            if (!ref.mounted || generation != _syncGeneration) return;
+            try {
+              final server = await repository.refresh();
+              if (ref.mounted && generation == _syncGeneration) {
+                state = state.copyWith(
+                  items: server.items,
+                  errorMessage: '$error',
+                );
+              }
+            } catch (_) {
+              if (ref.mounted && generation == _syncGeneration) {
+                state = state.copyWith(errorMessage: '$error');
+              }
+            }
+          });
+      return;
+    }
     if (next.appliedCoupon != null && !next.promotion.isValid) {
       next = next.copyWith(clearCoupon: true);
     }
@@ -224,6 +278,7 @@ class CartViewModel extends Notifier<CartState> {
   }
 
   bool applyCoupon(String code) {
+    if (ref.read(cartRepositoryProvider) is RemoteCartRepository) return false;
     final normalized = CartPricing.normalizeCode(code);
     final wallet = ref.read(walletRepositoryProvider).load();
     final refreshed = state.copyWith(
@@ -242,6 +297,9 @@ class CartViewModel extends Notifier<CartState> {
   }
 
   String? couponRejection(String code) {
+    if (ref.read(cartRepositoryProvider) is RemoteCartRepository) {
+      return 'Mã ưu đãi chưa được hỗ trợ khi đặt hàng COD.';
+    }
     final wallet = ref.read(walletRepositoryProvider).load();
     final normalized = CartPricing.normalizeCode(code);
     return CartPricing.evaluate(

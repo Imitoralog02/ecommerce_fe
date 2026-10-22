@@ -9,12 +9,14 @@ import '../../../navigation/presentation/views/main_nav_screen.dart';
 import '../../../orders/presentation/views/order_history_screen.dart';
 import '../../../settings/presentation/viewmodels/settings_viewmodel.dart';
 import '../../../tracking/presentation/views/order_tracking_screen.dart';
+import '../../../orders/domain/entities/order_entity.dart';
 
 class OrderConfirmedScreen extends ConsumerStatefulWidget {
   final String orderId;
   final String paymentMethod;
   final String estimatedDelivery;
   final String totalAmount;
+  final OrderStatus? status;
 
   const OrderConfirmedScreen({
     super.key,
@@ -22,6 +24,7 @@ class OrderConfirmedScreen extends ConsumerStatefulWidget {
     required this.paymentMethod,
     required this.estimatedDelivery,
     required this.totalAmount,
+    this.status,
   });
 
   @override
@@ -79,7 +82,9 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: ConfettiCelebrationWidget(
-        isPlaying: !disableAnimations,
+        isPlaying:
+            !disableAnimations &&
+            widget.status != OrderStatus.pendingConfirmation,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -113,9 +118,11 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                             ),
                           ],
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Icon(
-                            Icons.check_rounded,
+                            widget.status == OrderStatus.pendingConfirmation
+                                ? Icons.hourglass_top_rounded
+                                : Icons.check_rounded,
                             size: 42,
                             color: AppColors.liveGreen,
                           ),
@@ -129,7 +136,9 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                       child: Column(
                         children: [
                           Text(
-                            strings.orderConfirmedTitle,
+                            widget.status == OrderStatus.pendingConfirmation
+                                ? 'Đơn hàng đang chờ xác nhận'
+                                : strings.orderConfirmedTitle,
                             style: const TextStyle(
                               fontFamily: AppTypography.serifFont,
                               fontSize: 26,
@@ -140,7 +149,11 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '${strings.orderConfirmedThanks(customerName)}\n${strings.demoOrderNotice}',
+                            widget.status == OrderStatus.pendingConfirmation
+                                ? 'Đơn COD đã được ghi nhận. Hệ thống đang kiểm tra và giữ tồn kho; vui lòng xem lại trạng thái đơn.'
+                                : widget.status == null
+                                ? '${strings.orderConfirmedThanks(customerName)}\n${strings.demoOrderNotice}'
+                                : 'Đơn COD của bạn đã được xác nhận. Bạn có thể xem trạng thái trong lịch sử đơn.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 13.5,
@@ -191,7 +204,9 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                             ),
                             _buildReceiptRow(
                               icon: Icons.credit_card_outlined,
-                              label: strings.paidWithLabel,
+                              label: widget.status == null
+                                  ? strings.paidWithLabel
+                                  : 'Phương thức thanh toán',
                               value: widget.paymentMethod,
                             ),
                             const Padding(
@@ -203,7 +218,9 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                             ),
                             _buildReceiptRow(
                               icon: Icons.calendar_today_outlined,
-                              label: strings.arrivingLabel,
+                              label: widget.status == null
+                                  ? strings.arrivingLabel
+                                  : 'Dự kiến giao hàng',
                               value: widget.estimatedDelivery,
                             ),
                             const Padding(

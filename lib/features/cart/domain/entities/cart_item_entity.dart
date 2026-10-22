@@ -2,12 +2,14 @@ import 'package:intl/intl.dart';
 import '../../../home/domain/entities/product_entity.dart';
 
 class CartItemEntity {
+  final String? serverId;
   final ProductEntity product;
   final String selectedSize;
   final String selectedColor;
   final int quantity;
 
   const CartItemEntity({
+    this.serverId,
     required this.product,
     required this.selectedSize,
     this.selectedColor = 'Trắng kem',
@@ -22,12 +24,14 @@ class CartItemEntity {
   }
 
   CartItemEntity copyWith({
+    String? serverId,
     ProductEntity? product,
     String? selectedSize,
     String? selectedColor,
     int? quantity,
   }) {
     return CartItemEntity(
+      serverId: serverId ?? this.serverId,
       product: product ?? this.product,
       selectedSize: selectedSize ?? this.selectedSize,
       selectedColor: selectedColor ?? this.selectedColor,

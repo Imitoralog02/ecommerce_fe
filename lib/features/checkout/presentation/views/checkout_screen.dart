@@ -18,6 +18,7 @@ import '../../domain/entities/checkout_quote.dart';
 import '../../domain/entities/checkout_selection.dart';
 import '../viewmodels/checkout_viewmodel.dart';
 import 'order_confirmed_screen.dart';
+import '../../../../core/network/remote_repositories.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -28,6 +29,14 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _noteController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(
+      () => ref.read(checkoutViewModelProvider.notifier).refreshQuote(),
+    );
+  }
 
   @override
   void dispose() {
@@ -52,16 +61,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
+    final realOrder =
+        ref.read(checkoutRepositoryProvider) is RemoteCheckoutRepository;
     Navigator.pushReplacement(
       context,
       AppRouter.page(
         builder: (_) => OrderConfirmedScreen(
           orderId: order.id,
           paymentMethod: order.paymentMethod,
-          estimatedDelivery:
-              order.estimatedDelivery ??
-              order.shippingType.demoEstimatedDelivery,
+          estimatedDelivery: realOrder
+              ? 'Chưa có dự kiến giao hàng'
+              : order.estimatedDelivery ??
+                    order.shippingType.demoEstimatedDelivery,
           totalAmount: CurrencyFormatter.vnd(order.totalAmount),
+          status: order.status,
         ),
       ),
     );
@@ -94,6 +107,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final strings = AppLocalizations.of(context);
     final cartState = ref.watch(cartViewModelProvider);
     final checkoutState = ref.watch(checkoutViewModelProvider);
+    final remoteMode =
+        ref.read(checkoutRepositoryProvider) is RemoteCheckoutRepository;
     final checkoutNotifier = ref.read(checkoutViewModelProvider.notifier);
     final paymentMethods = ref.watch(paymentMethodsViewModelProvider);
     final selectedCard =
@@ -101,21 +116,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         paymentMethods.cards.firstOrNull;
     final addressState = ref.watch(addressViewModelProvider);
     final selectedAddress = addressState.selectedAddress;
-    final quote = CheckoutQuote.calculate(
+    final localQuote = CheckoutQuote.calculate(
       CartSnapshot(
         items: cartState.items,
-        appliedCoupon: cartState.appliedCoupon,
+        appliedCoupon: remoteMode ? null : cartState.appliedCoupon,
       ),
       CheckoutSelection(
         shippingType: checkoutState.shippingType,
         paymentType: checkoutState.paymentType,
       ),
-      wallet: ref.watch(walletViewModelProvider).toSnapshot(),
+      wallet: remoteMode
+          ? null
+          : ref.watch(walletViewModelProvider).toSnapshot(),
       firstOrder: !ref
           .watch(orderViewModelProvider)
           .orders
           .any((order) => order.isUserPlaced),
     );
+    final quote = remoteMode
+        ? (checkoutState.serverQuote ?? localQuote)
+        : localQuote;
     final totalText = CurrencyFormatter.vnd(quote.total);
 
     return Scaffold(
@@ -299,7 +319,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 const SizedBox(width: 8),
                 Flexible(
                   child: GestureDetector(
-                    onTap: _managePaymentMethods,
+                    onTap: remoteMode ? null : _managePaymentMethods,
                     child: Text(
                       strings.managePaymentMethodsAction,
                       maxLines: 1,
@@ -322,12 +342,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               onTap: () =>
                   checkoutNotifier.setPayment(PaymentType.cashOnDelivery),
               title: 'Trả tiền khi nhận hàng',
-              subtitle: 'Lựa chọn COD cho đơn hàng mẫu',
+              subtitle: remoteMode
+                  ? 'Thanh toán khi nhận hàng'
+                  : 'Lựa chọn COD cho đơn hàng mẫu',
             ),
             const SizedBox(height: 8),
             _buildOptionTile(
               isSelected: checkoutState.paymentType == PaymentType.creditCard,
-              onTap: selectedCard == null
+              onTap: remoteMode || selectedCard == null
                   ? null
                   : () => checkoutNotifier.setPayment(PaymentType.creditCard),
               title: 'Thẻ ATM / Visa / Mastercard',
@@ -338,7 +360,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             const SizedBox(height: 8),
             _buildOptionTile(
               isSelected: checkoutState.paymentType == PaymentType.momo,
-              onTap: paymentMethods.momoLinked
+              onTap: !remoteMode && paymentMethods.momoLinked
                   ? () => checkoutNotifier.setPayment(PaymentType.momo)
                   : null,
               title: 'MoMo',
@@ -349,7 +371,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             const SizedBox(height: 8),
             _buildOptionTile(
               isSelected: checkoutState.paymentType == PaymentType.zalopay,
-              onTap: paymentMethods.zalopayLinked
+              onTap: !remoteMode && paymentMethods.zalopayLinked
                   ? () => checkoutNotifier.setPayment(PaymentType.zalopay)
                   : null,
               title: 'ZaloPay',
@@ -360,7 +382,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             const SizedBox(height: 8),
             _buildOptionTile(
               isSelected: checkoutState.paymentType == PaymentType.applePay,
-              onTap: paymentMethods.deviceWalletEnabled
+              onTap: !remoteMode && paymentMethods.deviceWalletEnabled
                   ? () => checkoutNotifier.setPayment(PaymentType.applePay)
                   : null,
               title: strings.deviceWalletPaymentTitle,

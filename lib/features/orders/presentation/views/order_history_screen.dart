@@ -145,12 +145,15 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen>
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              final cancelled = ref
+            onPressed: () async {
+              final cancelled = await ref
                   .read(orderViewModelProvider.notifier)
-                  .cancelOrder(order.id);
+                  .cancelOrderAsync(order.id);
+              if (!mounted) return;
+              if (!ctx.mounted) return;
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
+              messenger.showSnackBar(
                 SnackBar(
                   content: Text(
                     cancelled

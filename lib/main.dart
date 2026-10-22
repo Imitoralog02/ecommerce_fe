@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'core/network/api_client.dart';
+import 'core/network/remote_repositories.dart';
 import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
 import 'core/l10n/generated/app_localizations.dart';
@@ -11,21 +13,19 @@ import 'features/onboarding/presentation/viewmodels/onboarding_viewmodel.dart';
 import 'features/settings/presentation/viewmodels/settings_viewmodel.dart';
 import 'features/settings/data/repositories/shared_preferences_settings_repository.dart';
 import 'features/settings/di/settings_providers.dart';
-import 'features/address/data/repositories/shared_preferences_address_repository.dart';
 import 'features/address/di/address_providers.dart';
-import 'features/cart/data/repositories/shared_preferences_cart_repository.dart';
 import 'features/cart/di/cart_providers.dart';
 import 'features/home/data/repositories/mock_product_repository.dart';
-import 'features/orders/data/repositories/shared_preferences_order_repository.dart';
+import 'features/home/di/home_providers.dart';
+import 'features/auth/di/auth_providers.dart';
+import 'features/checkout/di/checkout_providers.dart';
 import 'features/orders/di/order_providers.dart';
-import 'features/wishlist/data/repositories/shared_preferences_wishlist_repository.dart';
 import 'features/wishlist/di/wishlist_providers.dart';
 import 'features/wallet/data/repositories/shared_preferences_wallet_repository.dart';
 import 'features/wallet/di/wallet_providers.dart';
 import 'data/local/demo_preferences_store.dart';
 import 'features/history/data/repositories/mock_recently_viewed_repository.dart';
 import 'features/history/di/history_providers.dart';
-import 'features/notifications/data/repositories/mock_notification_repository.dart';
 import 'features/notifications/di/notification_providers.dart';
 import 'features/payment_methods/data/repositories/mock_payment_methods_repository.dart';
 import 'features/payment_methods/di/payment_methods_providers.dart';
@@ -42,6 +42,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final preferences = await SharedPreferences.getInstance();
   final demoStore = DemoPreferencesStore(preferences);
+  final api = ApiClient();
+  await api.restoreSession();
+  final remoteProducts = RemoteProductRepository(api);
+  final remoteCart = RemoteCartRepository(api);
   SystemChrome.setSystemUIOverlayStyle(
     SystemUiOverlayStyle.dark.copyWith(
       statusBarColor: Colors.transparent,
@@ -54,27 +58,22 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [
+        authRepositoryProvider.overrideWithValue(RemoteAuthRepository(api)),
+        productRepositoryProvider.overrideWithValue(remoteProducts),
+        checkoutRepositoryProvider.overrideWithValue(
+          RemoteCheckoutRepository(api, remoteCart),
+        ),
         settingsRepositoryProvider.overrideWithValue(
           SharedPreferencesSettingsRepository(preferences),
         ),
-        cartRepositoryProvider.overrideWithValue(
-          SharedPreferencesCartRepository(preferences),
-        ),
+        cartRepositoryProvider.overrideWithValue(remoteCart),
         addressRepositoryProvider.overrideWithValue(
-          SharedPreferencesAddressRepository(preferences),
+          RemoteAddressRepository(api),
         ),
         wishlistRepositoryProvider.overrideWithValue(
-          SharedPreferencesWishlistRepository(
-            preferences,
-            MockProductRepository.mockCatalog,
-          ),
+          RemoteWishlistRepository(api),
         ),
-        orderRepositoryProvider.overrideWithValue(
-          SharedPreferencesOrderRepository(
-            preferences,
-            MockProductRepository.mockCatalog,
-          ),
-        ),
+        orderRepositoryProvider.overrideWithValue(RemoteOrderRepository(api)),
         walletRepositoryProvider.overrideWithValue(
           SharedPreferencesWalletRepository(preferences),
         ),
@@ -85,7 +84,7 @@ Future<void> main() async {
           ),
         ),
         notificationRepositoryProvider.overrideWithValue(
-          MockNotificationRepository(demoStore),
+          RemoteNotificationRepository(api),
         ),
         paymentMethodsRepositoryProvider.overrideWithValue(
           MockPaymentMethodsRepository(demoStore),
@@ -97,7 +96,7 @@ Future<void> main() async {
           MockReviewRepository(demoStore),
         ),
         searchRepositoryProvider.overrideWithValue(
-          MockSearchRepository(MockProductRepository(), demoStore),
+          MockSearchRepository(remoteProducts, demoStore),
         ),
         supportRepositoryProvider.overrideWithValue(
           MockSupportRepository(demoStore),

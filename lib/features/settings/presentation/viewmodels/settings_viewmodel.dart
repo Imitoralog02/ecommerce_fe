@@ -7,6 +7,16 @@ class SettingsViewModel extends Notifier<UserSettings> {
   @override
   UserSettings build() => ref.read(settingsRepositoryProvider).load();
 
+  void showRemoteProfile({
+    required String name,
+    required String email,
+    required String phone,
+  }) {
+    state = state.copyWith(
+      profile: state.profile.copyWith(name: name, email: email, phone: phone),
+    );
+  }
+
   void _save(UserSettings next) {
     ref.read(settingsRepositoryProvider).save(next);
     state = next;

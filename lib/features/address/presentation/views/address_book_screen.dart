@@ -347,10 +347,24 @@ class AddressBookScreen extends ConsumerWidget {
                   const Spacer(),
                   if (!address.isDefault)
                     GestureDetector(
-                      onTap: () {
-                        ref
+                      onTap: () async {
+                        final saved = await ref
                             .read(addressViewModelProvider.notifier)
                             .setDefaultAddress(address.id);
+                        if (!context.mounted) return;
+                        if (!saved) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                ref
+                                        .read(addressViewModelProvider)
+                                        .errorMessage ??
+                                    'Không thể cập nhật địa chỉ',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(

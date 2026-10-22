@@ -1,6 +1,6 @@
 # Lộ trình hoàn thiện frontend NÉORA
 
-Cập nhật: 21/10/2026. Dự án chưa có backend; các đơn hàng, đăng nhập và thanh toán hiện là luồng mock data. Kiến trúc hiện dùng `domain` / `data` / `presentation`, ViewModel với Riverpod và repository qua provider.
+Cập nhật tích hợp: 23/10/2026. Frontend đã nối API Gateway cho đăng nhập, catalog, giỏ, địa chỉ, wishlist, COD, lịch sử đơn và thông báo. Các mục hoàn thành bên dưới mô tả đợt phát triển demo trước đó; thanh toán điện tử, voucher/xu, tracking chi tiết, review, đổi trả và hỗ trợ vẫn là demo. Kiến trúc dùng `domain` / `data` / `presentation`, ViewModel với Riverpod và repository qua provider.
 
 ## Đã hoàn thành trong đợt này
 

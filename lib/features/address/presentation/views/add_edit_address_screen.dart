@@ -149,7 +149,7 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
     );
   }
 
-  void _handleSave() {
+  Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
     final id =
@@ -168,10 +168,20 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
     );
 
     final vm = ref.read(addressViewModelProvider.notifier);
-    if (widget.initialAddress != null) {
-      vm.updateAddress(newAddress);
-    } else {
-      vm.addAddress(newAddress);
+    final saved = widget.initialAddress != null
+        ? await vm.updateAddress(newAddress)
+        : await vm.addAddress(newAddress);
+    if (!mounted) return;
+    if (!saved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref.read(addressViewModelProvider).errorMessage ??
+                'Không thể lưu địa chỉ',
+          ),
+        ),
+      );
+      return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -223,25 +233,35 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              ref
+            onPressed: () async {
+              final deleted = await ref
                   .read(addressViewModelProvider.notifier)
                   .deleteAddress(widget.initialAddress!.id);
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text(
-                    'Đã xoá địa chỉ',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+              if (!mounted || !ctx.mounted) return;
+              final messenger = ScaffoldMessenger.of(context);
+              if (!deleted) {
+                Navigator.pop(ctx);
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      ref.read(addressViewModelProvider).errorMessage ??
+                          'Không thể xoá địa chỉ',
+                    ),
                   ),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              messenger.showSnackBar(
+                SnackBar(
+                  content: const Text('Đã xoá địa chỉ',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
                   backgroundColor: AppColors.saleRed,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               );
+              Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.saleRed,
