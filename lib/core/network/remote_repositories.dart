@@ -19,6 +19,7 @@ import '../../features/orders/domain/repositories/order_repository.dart';
 import '../../features/wishlist/domain/repositories/wishlist_repository.dart';
 import 'api_client.dart';
 import 'api_models.dart';
+import 'pending_checkout_store.dart';
 
 class RemoteAuthRepository implements AuthRepository {
   RemoteAuthRepository(this.api);
@@ -45,6 +46,11 @@ class RemoteAuthRepository implements AuthRepository {
       throw const ApiException(501, 'Chưa hỗ trợ đặt lại mật khẩu');
   Future<void> logout() => api.logout();
   Future<Map<String, dynamic>> profile() async => asMap(await api.get('/me'));
+  Future<Map<String, dynamic>> updateProfile({
+    required String fullName,
+    required String phone,
+  }) async =>
+      asMap(await api.put('/me', {'fullName': fullName, 'phone': phone}));
 }
 
 class RemoteProductRepository implements ProductRepository {
@@ -52,10 +58,25 @@ class RemoteProductRepository implements ProductRepository {
   final ApiClient api;
   @override
   Future<List<ProductEntity>> getFeaturedProducts() async {
-    final data = asMap(
-      await api.get('/products', query: {'page': '0', 'size': '100'}),
-    );
-    return asList(data['content']).map(productFromApi).toList();
+    return asList(
+      await api.get('/products/featured', query: {'size': '8'}),
+    ).map(productFromApi).toList();
+  }
+
+  Future<List<ProductEntity>> getAllProducts() => _loadPages(null);
+
+  Future<List<ProductEntity>> _loadPages(String? category) async {
+    final products = <ProductEntity>[];
+    var page = 0;
+    while (true) {
+      final query = {'page': '$page', 'size': '100'};
+      if (category != null) query['category'] = category;
+      final data = asMap(await api.get('/products', query: query));
+      products.addAll(asList(data['content']).map(productFromApi));
+      final totalPages = data['totalPages'] as int? ?? 0;
+      page++;
+      if (page >= totalPages) return products;
+    }
   }
 
   @override
@@ -74,13 +95,7 @@ class RemoteProductRepository implements ProductRepository {
 
   @override
   Future<List<ProductEntity>> getProductsByCategory(String category) async {
-    final data = asMap(
-      await api.get(
-        '/products',
-        query: {'category': category, 'page': '0', 'size': '100'},
-      ),
-    );
-    return asList(data['content']).map(productFromApi).toList();
+    return _loadPages(category);
   }
 }
 
@@ -213,6 +228,16 @@ class RemoteAddressRepository implements AddressRepository {
   AddressBookSnapshot load() {
     _ensureOwner();
     return _cache;
+  }
+
+  void selectAddress(String id) {
+    _ensureOwner();
+    if (_cache.addresses.any((address) => address.id == id)) {
+      _cache = AddressBookSnapshot(
+        addresses: _cache.addresses,
+        selectedAddressId: id,
+      );
+    }
   }
 
   void _ensureOwner() {
@@ -521,11 +546,32 @@ class RemoteNotificationRepository implements NotificationRepository {
 }
 
 class RemoteCheckoutRepository implements CheckoutRepository {
-  RemoteCheckoutRepository(this.api, this.cart);
+  RemoteCheckoutRepository(
+    this.api,
+    this.cart, {
+    PendingCheckoutStore? pendingStore,
+  }) : pendingStore = pendingStore ?? MemoryPendingCheckoutStore();
   final ApiClient api;
   final RemoteCartRepository cart;
-  String? _pendingKey;
-  String? _pendingFingerprint;
+  final PendingCheckoutStore pendingStore;
+
+  Future<OrderEntity?> recoverPendingOrder() async {
+    final owner = api.userId;
+    if (owner == null) return null;
+    final pending = pendingStore.read(owner);
+    if (pending == null) return null;
+    try {
+      final result = await api.get(
+        '/orders/by-request/${Uri.encodeComponent(pending.key)}',
+      );
+      final order = orderFromApi(result);
+      await pendingStore.write(owner, null);
+      return order;
+    } on ApiException catch (error) {
+      if (error.status == 404) return null;
+      rethrow;
+    }
+  }
 
   Future<Map<String, dynamic>> quote(ShippingType shipping) async {
     await cart.settle();
@@ -545,29 +591,69 @@ class RemoteCheckoutRepository implements CheckoutRepository {
         'Hiện chỉ hỗ trợ COD, chưa áp dụng voucher hoặc xu',
       );
     }
-    await quote(request.selection.shippingType);
+    final recovered = await recoverPendingOrder();
+    if (recovered != null) return recovered;
+    final owner = api.userId;
+    if (owner == null) {
+      throw const ApiException(401, 'Vui lòng đăng nhập để đặt hàng');
+    }
+    final previous = pendingStore.read(owner);
+    if (previous != null) {
+      final resolution = asMap(
+        await api.post(
+          '/orders/by-request/${Uri.encodeComponent(previous.key)}/abandon',
+          {},
+        ),
+      );
+      if (resolution['outcome'] == 'ORDER_FOUND') {
+        final order = orderFromApi(resolution['order']);
+        await pendingStore.write(owner, null);
+        return order;
+      }
+      if (resolution['outcome'] != 'ABANDONED') {
+        throw const ApiException(502, 'Không xác minh được đơn hàng trước');
+      }
+      await pendingStore.write(owner, null);
+    }
+    if (request.items.any((item) => item.serverId == null)) {
+      throw const ApiException(
+        409,
+        'Vui lòng tải lại giỏ hàng trước khi đặt hàng',
+      );
+    }
+    final expectedCartItems =
+        request.items
+            .map(
+              (item) => <String, Object>{
+                'id': item.serverId!,
+                'quantity': item.quantity,
+              },
+            )
+            .toList()
+          ..sort((a, b) => (a['id'] as String).compareTo(b['id'] as String));
     final body = <String, Object?>{
       'shippingType': request.selection.shippingType.name.toUpperCase(),
       'paymentType': 'CASH_ON_DELIVERY',
       'recipientName': request.address.recipientName,
       'phone': request.address.phoneNumber,
       'addressLine': request.address.fullAddress,
+      'expectedCartItems': expectedCartItems,
     };
-    final fingerprint =
-        '$body|${request.items.map((item) => '${item.product.id}:${item.selectedSize}:${item.selectedColor}:${item.quantity}').join(',')}';
-    if (_pendingKey == null || _pendingFingerprint != fingerprint) {
-      _pendingFingerprint = fingerprint;
-      _pendingKey =
-          '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 32)}';
-    }
+    final fingerprint = '$body';
+    await quote(request.selection.shippingType);
+    final pending = PendingCheckout(
+      key:
+          '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 32)}',
+      fingerprint: fingerprint,
+    );
+    await pendingStore.write(owner, pending);
     final result = await api.post(
       '/orders',
       body,
-      headers: {'Idempotency-Key': _pendingKey!},
+      headers: {'Idempotency-Key': pending.key},
     );
-    _pendingKey = null;
-    _pendingFingerprint = null;
     var order = orderFromApi(result, address: request.address);
+    await pendingStore.write(owner, null);
     for (
       var attempt = 0;
       attempt < 5 && order.status == OrderStatus.pendingConfirmation;

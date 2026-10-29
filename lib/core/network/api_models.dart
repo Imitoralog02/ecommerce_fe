@@ -148,6 +148,8 @@ OrderEntity orderFromApi(dynamic value, {AddressEntity? address}) {
     discountAmount: asAmount(data['discount']),
     totalAmount: asAmount(data['total']),
     shippingAddress: shippingAddress,
+    trackingNumber: data['trackingNumber'] as String?,
+    estimatedDelivery: data['estimatedDelivery'] as String?,
     paymentMethod: 'Thanh toán khi nhận hàng (COD)',
     shippingType: switch (data['shippingType']) {
       'EXPRESS' => ShippingType.express,

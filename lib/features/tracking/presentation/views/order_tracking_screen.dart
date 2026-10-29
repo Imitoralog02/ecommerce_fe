@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/product_visual_widget.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
 import '../../../checkout/domain/entities/checkout_selection.dart';
 import '../../../orders/domain/entities/order_entity.dart';
+import '../../../orders/di/order_providers.dart';
 import '../../../orders/presentation/viewmodels/order_viewmodel.dart';
 import '../../domain/entities/tracking_snapshot.dart';
 import '../viewmodels/tracking_viewmodel.dart';
@@ -96,6 +98,28 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final remoteMode =
+        ref.read(orderRepositoryProvider) is RemoteOrderRepository;
+    final orderState = ref.watch(orderViewModelProvider);
+    if (remoteMode &&
+        orderState.findById(_activeOrderId ?? widget.orderId) == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Theo dõi đơn hàng')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Chưa tìm thấy đơn hàng này.'),
+              TextButton(
+                onPressed: () =>
+                    ref.read(orderViewModelProvider.notifier).refresh(),
+                child: const Text('Tải lại'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -199,8 +223,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                           ? 'Đơn hàng đã giao'
                           : _trackedOrder.shippingType ==
                                 ShippingType.storePickup
-                          ? 'Dự kiến nhận: ${_trackedOrder.estimatedDelivery ?? _trackedOrder.shippingType.demoEstimatedDelivery}'
-                          : 'Dự kiến giao: ${_trackedOrder.estimatedDelivery ?? _trackedOrder.shippingType.demoEstimatedDelivery}',
+                          ? 'Dự kiến nhận: ${_trackedOrder.estimatedDelivery ?? (ref.read(orderRepositoryProvider) is RemoteOrderRepository ? 'Chưa có dự kiến' : _trackedOrder.shippingType.demoEstimatedDelivery)}'
+                          : 'Dự kiến giao: ${_trackedOrder.estimatedDelivery ?? (ref.read(orderRepositoryProvider) is RemoteOrderRepository ? 'Chưa có dự kiến' : _trackedOrder.shippingType.demoEstimatedDelivery)}',
                       style: TextStyle(
                         fontFamily: AppTypography.serifFont,
                         fontSize: 20,
@@ -216,6 +240,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                         color: AppColors.textSecondary,
                       ),
                     ),
+                    if (_trackedOrder.trackingNumber?.isNotEmpty == true)
+                      Text('Mã vận đơn: ${_trackedOrder.trackingNumber}'),
                   ],
                 ),
               ),

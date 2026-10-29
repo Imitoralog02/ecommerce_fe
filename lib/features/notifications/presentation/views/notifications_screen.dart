@@ -24,6 +24,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    Future.microtask(
+      () => ref.read(notificationViewModelProvider.notifier).refresh(),
+    );
   }
 
   @override
@@ -32,19 +35,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     super.dispose();
   }
 
-  void _markAllAsRead() {
-    ref.read(notificationViewModelProvider.notifier).markAllAsRead();
+  Future<void> _markAllAsRead() async {
+    final success = await ref
+        .read(notificationViewModelProvider.notifier)
+        .markAllAsRead();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.done_all_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 10),
-            Text('Đã đánh dấu đọc tất cả thông báo!'),
-          ],
+        content: Text(
+          success
+              ? 'Đã đánh dấu đọc tất cả thông báo!'
+              : 'Không thể đánh dấu đã đọc. Vui lòng thử lại.',
         ),
-        backgroundColor: AppColors.brandBlack,
+        backgroundColor: success ? AppColors.brandBlack : AppColors.saleRed,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         duration: const Duration(seconds: 2),
@@ -69,6 +73,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
   @override
   Widget build(BuildContext context) {
     final unreadCount = ref.watch(unreadNotificationCountProvider);
+    final notificationError = ref.watch(notificationErrorProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -195,12 +200,35 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildNotificationList(0),
-          _buildNotificationList(1),
-          _buildNotificationList(2),
+          if (notificationError != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text('Không tải được thông báo: $notificationError'),
+                  ),
+                  TextButton(
+                    onPressed: () => ref
+                        .read(notificationViewModelProvider.notifier)
+                        .refresh(),
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildNotificationList(0),
+                _buildNotificationList(1),
+                _buildNotificationList(2),
+              ],
+            ),
+          ),
         ],
       ),
     );

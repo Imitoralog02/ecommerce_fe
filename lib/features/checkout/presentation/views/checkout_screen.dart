@@ -168,10 +168,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const EditorialHeading(
+            EditorialHeading(
               title: 'Sắp đến tay bạn.',
-              subtitle: 'Đặt đơn mẫu, chưa phát sinh thanh toán',
-              padding: EdgeInsets.fromLTRB(0, 8, 0, 20),
+              subtitle: remoteMode
+                  ? 'Xác nhận địa chỉ và thanh toán khi nhận hàng'
+                  : 'Đặt đơn mẫu, chưa phát sinh thanh toán',
+              padding: const EdgeInsets.fromLTRB(0, 8, 0, 20),
             ),
 
             // 1. Địa chỉ nhận hàng
@@ -290,7 +292,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               isSelected: checkoutState.shippingType == ShippingType.standard,
               onTap: () => checkoutNotifier.setShipping(ShippingType.standard),
               title: 'Giao tiêu chuẩn',
-              subtitle: ShippingType.standard.demoEstimatedDelivery,
+              subtitle: remoteMode
+                  ? 'Thời gian giao hàng sẽ được xác nhận'
+                  : ShippingType.standard.demoEstimatedDelivery,
               trailing: strings.freeLabel,
               isPositiveTrailing: true,
             ),
@@ -299,8 +303,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               isSelected: checkoutState.shippingType == ShippingType.express,
               onTap: () => checkoutNotifier.setShipping(ShippingType.express),
               title: 'Giao hỏa tốc',
-              subtitle: ShippingType.express.demoEstimatedDelivery,
-              trailing: CurrencyFormatter.vnd(30000),
+              subtitle: remoteMode
+                  ? 'Thời gian giao hàng sẽ được xác nhận'
+                  : ShippingType.express.demoEstimatedDelivery,
+              trailing: remoteMode
+                  ? checkoutState.shippingType == ShippingType.express &&
+                            checkoutState.serverQuote != null
+                        ? CurrencyFormatter.vnd(
+                            checkoutState.serverQuote!.shippingFee,
+                          )
+                        : 'Xem phí khi chọn'
+                  : CurrencyFormatter.vnd(30000),
             ),
             const SizedBox(height: 22),
 
@@ -317,22 +330,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Flexible(
-                  child: GestureDetector(
-                    onTap: remoteMode ? null : _managePaymentMethods,
-                    child: Text(
-                      strings.managePaymentMethodsAction,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                        decoration: TextDecoration.underline,
+                if (!remoteMode)
+                  Flexible(
+                    child: GestureDetector(
+                      onTap: _managePaymentMethods,
+                      child: Text(
+                        strings.managePaymentMethodsAction,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -346,50 +360,52 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ? 'Thanh toán khi nhận hàng'
                   : 'Lựa chọn COD cho đơn hàng mẫu',
             ),
-            const SizedBox(height: 8),
-            _buildOptionTile(
-              isSelected: checkoutState.paymentType == PaymentType.creditCard,
-              onTap: remoteMode || selectedCard == null
-                  ? null
-                  : () => checkoutNotifier.setPayment(PaymentType.creditCard),
-              title: 'Thẻ ATM / Visa / Mastercard',
-              subtitle: selectedCard == null
-                  ? strings.paymentUnavailableLabel
-                  : strings.mockCardEnding(selectedCard.lastFour),
-            ),
-            const SizedBox(height: 8),
-            _buildOptionTile(
-              isSelected: checkoutState.paymentType == PaymentType.momo,
-              onTap: !remoteMode && paymentMethods.momoLinked
-                  ? () => checkoutNotifier.setPayment(PaymentType.momo)
-                  : null,
-              title: 'MoMo',
-              subtitle: paymentMethods.momoLinked
-                  ? 'Ví MoMo mẫu cho checkout demo'
-                  : strings.paymentUnavailableLabel,
-            ),
-            const SizedBox(height: 8),
-            _buildOptionTile(
-              isSelected: checkoutState.paymentType == PaymentType.zalopay,
-              onTap: !remoteMode && paymentMethods.zalopayLinked
-                  ? () => checkoutNotifier.setPayment(PaymentType.zalopay)
-                  : null,
-              title: 'ZaloPay',
-              subtitle: paymentMethods.zalopayLinked
-                  ? strings.mockPaymentLabel
-                  : strings.paymentUnavailableLabel,
-            ),
-            const SizedBox(height: 8),
-            _buildOptionTile(
-              isSelected: checkoutState.paymentType == PaymentType.applePay,
-              onTap: !remoteMode && paymentMethods.deviceWalletEnabled
-                  ? () => checkoutNotifier.setPayment(PaymentType.applePay)
-                  : null,
-              title: strings.deviceWalletPaymentTitle,
-              subtitle: paymentMethods.deviceWalletEnabled
-                  ? strings.mockPaymentLabel
-                  : strings.paymentUnavailableLabel,
-            ),
+            if (!remoteMode) ...[
+              const SizedBox(height: 8),
+              _buildOptionTile(
+                isSelected: checkoutState.paymentType == PaymentType.creditCard,
+                onTap: remoteMode || selectedCard == null
+                    ? null
+                    : () => checkoutNotifier.setPayment(PaymentType.creditCard),
+                title: 'Thẻ ATM / Visa / Mastercard',
+                subtitle: selectedCard == null
+                    ? strings.paymentUnavailableLabel
+                    : strings.mockCardEnding(selectedCard.lastFour),
+              ),
+              const SizedBox(height: 8),
+              _buildOptionTile(
+                isSelected: checkoutState.paymentType == PaymentType.momo,
+                onTap: !remoteMode && paymentMethods.momoLinked
+                    ? () => checkoutNotifier.setPayment(PaymentType.momo)
+                    : null,
+                title: 'MoMo',
+                subtitle: paymentMethods.momoLinked
+                    ? 'Ví MoMo mẫu cho checkout demo'
+                    : strings.paymentUnavailableLabel,
+              ),
+              const SizedBox(height: 8),
+              _buildOptionTile(
+                isSelected: checkoutState.paymentType == PaymentType.zalopay,
+                onTap: !remoteMode && paymentMethods.zalopayLinked
+                    ? () => checkoutNotifier.setPayment(PaymentType.zalopay)
+                    : null,
+                title: 'ZaloPay',
+                subtitle: paymentMethods.zalopayLinked
+                    ? strings.mockPaymentLabel
+                    : strings.paymentUnavailableLabel,
+              ),
+              const SizedBox(height: 8),
+              _buildOptionTile(
+                isSelected: checkoutState.paymentType == PaymentType.applePay,
+                onTap: !remoteMode && paymentMethods.deviceWalletEnabled
+                    ? () => checkoutNotifier.setPayment(PaymentType.applePay)
+                    : null,
+                title: strings.deviceWalletPaymentTitle,
+                subtitle: paymentMethods.deviceWalletEnabled
+                    ? strings.mockPaymentLabel
+                    : strings.paymentUnavailableLabel,
+              ),
+            ],
             const SizedBox(height: 22),
 
             // 4. Đơn hàng của bạn (compact items + note)
@@ -520,8 +536,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       style: const TextStyle(color: AppColors.saleRed),
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  _buildBillLine(strings.taxLabel, strings.taxIncludedLabel),
+                  if (!remoteMode) ...[
+                    const SizedBox(height: 8),
+                    _buildBillLine(strings.taxLabel, strings.taxIncludedLabel),
+                  ],
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 10),
                     child: Divider(color: AppColors.divider, height: 1),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -8,6 +10,7 @@ import '../../../../core/widgets/animated_price_counter.dart';
 import '../../../../core/widgets/editorial_heading.dart';
 import '../../../../core/widgets/product_visual_widget.dart';
 import '../../../checkout/presentation/views/checkout_screen.dart';
+import '../../di/cart_providers.dart';
 import '../../../shop/presentation/views/lookbook_screen.dart';
 import '../viewmodels/cart_viewmodel.dart';
 
@@ -34,6 +37,25 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final strings = AppLocalizations.of(context);
     final cartState = ref.watch(cartViewModelProvider);
     final cartNotifier = ref.read(cartViewModelProvider.notifier);
+    ref.listen<String?>(
+      cartViewModelProvider.select((value) => value.errorMessage),
+      (previous, next) {
+        if (next == null || next.isEmpty || next == previous) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next),
+            action: SnackBarAction(
+              label: 'Thử lại',
+              onPressed: cartNotifier.refreshFromServer,
+            ),
+          ),
+        );
+      },
+    );
+    final remoteCart = ref.read(cartRepositoryProvider) is RemoteCartRepository;
+    final shippingLabel = remoteCart
+        ? 'Tính khi thanh toán'
+        : '${NumberFormat('#,###', 'vi_VN').format(cartState.shippingFee.toInt())} ₫';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -516,7 +538,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       children: [
                         _buildBillRow('Tạm tính', cartState.formattedSubtotal),
                         const SizedBox(height: 8),
-                        _buildBillRow('Phí giao hàng', '30.000 ₫'),
+                        _buildBillRow('Phí giao hàng', shippingLabel),
                         if (cartState.discount > 0) ...[
                           const SizedBox(height: 8),
                           _buildBillRow(
@@ -532,24 +554,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Tổng thanh toán',
-                                    style: TextStyle(
+                                    remoteCart
+                                        ? 'Tạm tính trước phí giao hàng'
+                                        : 'Tổng thanh toán',
+                                    style: const TextStyle(
                                       fontSize: 14.5,
                                       fontWeight: FontWeight.w700,
                                       color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    'Đã bao gồm VAT',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textMuted,
                                     ),
                                   ),
                                 ],
@@ -580,7 +596,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                'Giao tiêu chuẩn • Dự kiến nhận 20–22/10',
+                                'Chọn phương thức giao hàng khi thanh toán',
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   color: AppColors.textSecondary,

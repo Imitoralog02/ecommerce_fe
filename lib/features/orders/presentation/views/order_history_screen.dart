@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/product_visual_widget.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
@@ -8,6 +9,7 @@ import '../../../navigation/presentation/views/main_nav_screen.dart';
 import '../../../reviews/presentation/views/write_review_screen.dart';
 import '../../../tracking/presentation/views/order_tracking_screen.dart';
 import '../../domain/entities/order_entity.dart';
+import '../../di/order_providers.dart';
 import '../viewmodels/order_viewmodel.dart';
 import 'order_detail_screen.dart';
 
@@ -41,6 +43,9 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen>
       vsync: this,
       initialIndex: widget.initialTabIndex.clamp(0, _tabs.length - 1),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(orderViewModelProvider.notifier).refresh();
+    });
   }
 
   @override
@@ -558,7 +563,9 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen>
                   ],
 
                   // Review button (for delivered)
-                  if (order.status == OrderStatus.delivered) ...[
+                  if (order.status == OrderStatus.delivered &&
+                      ref.read(orderRepositoryProvider)
+                          is! RemoteOrderRepository) ...[
                     OutlinedButton.icon(
                       onPressed: () => _handleReview(order),
                       icon: const Icon(Icons.star_outline_rounded, size: 16),

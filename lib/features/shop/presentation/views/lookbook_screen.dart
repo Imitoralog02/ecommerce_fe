@@ -80,13 +80,13 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
     });
   }
 
-  void _addSelectedToCart(LookbookThemeModel outfit) {
+  Future<void> _addSelectedToCart(LookbookThemeModel outfit) async {
     final notifier = ref.read(cartViewModelProvider.notifier);
     int addedCount = 0;
     for (int i = 0; i < outfit.items.length; i++) {
       if (_checkedItems.contains(i)) {
         final item = outfit.items[i];
-        if (notifier.addToCart(
+        if (await notifier.addToCartConfirmed(
           item.product,
           item.selectedSize,
           item.selectedColor,
@@ -95,7 +95,18 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
         }
       }
     }
-    if (addedCount == 0) return;
+    if (!mounted) return;
+    if (addedCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref.read(cartViewModelProvider).errorMessage ??
+                'Không thể thêm các sản phẩm đã chọn.',
+          ),
+        ),
+      );
+      return;
+    }
 
     HapticFeedback.mediumImpact();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();

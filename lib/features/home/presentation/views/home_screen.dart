@@ -109,6 +109,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
 
+    if (homeState.errorMessage != null && homeState.allProducts.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(homeState.errorMessage!, textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () =>
+                      ref.read(homeViewModelProvider.notifier).loadHomeData(),
+                  child: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final products = homeState.featuredProducts;
     final filteredProducts = _getFilteredProducts(products);
 
@@ -267,12 +290,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   );
                 },
-                onQuickAdd: (product) {
-                  ref.read(cartViewModelProvider.notifier).addToCart(product);
+                onQuickAdd: (product) async {
+                  final added = await ref
+                      .read(cartViewModelProvider.notifier)
+                      .addToCartConfirmed(product);
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(strings.addedProductToCart(product.title)),
+                      content: Text(
+                        added
+                            ? strings.addedProductToCart(product.title)
+                            : ref.read(cartViewModelProvider).errorMessage ??
+                                  'Không thể thêm sản phẩm vào giỏ hàng.',
+                      ),
                       backgroundColor: AppColors.primary,
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(

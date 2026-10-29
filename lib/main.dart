@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/network/api_client.dart';
+import 'core/network/pending_checkout_store.dart';
 import 'core/network/remote_repositories.dart';
 import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
@@ -61,7 +62,11 @@ Future<void> main() async {
         authRepositoryProvider.overrideWithValue(RemoteAuthRepository(api)),
         productRepositoryProvider.overrideWithValue(remoteProducts),
         checkoutRepositoryProvider.overrideWithValue(
-          RemoteCheckoutRepository(api, remoteCart),
+          RemoteCheckoutRepository(
+            api,
+            remoteCart,
+            pendingStore: SharedPreferencesPendingCheckoutStore(preferences),
+          ),
         ),
         settingsRepositoryProvider.overrideWithValue(
           SharedPreferencesSettingsRepository(preferences),

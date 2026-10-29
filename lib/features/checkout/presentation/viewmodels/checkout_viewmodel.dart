@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../address/di/address_providers.dart';
@@ -12,6 +14,7 @@ import '../../di/checkout_providers.dart';
 import '../../domain/entities/checkout_selection.dart';
 import '../../domain/usecases/place_order_use_case.dart';
 import '../../../../core/network/remote_repositories.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/checkout_quote.dart';
 export '../../di/checkout_providers.dart';
 
@@ -109,8 +112,31 @@ class CheckoutViewModel extends Notifier<CheckoutState> {
     if (state.isProcessing) return null;
     state = state.copyWith(isProcessing: true, clearError: true);
     try {
-      final remote =
-          ref.read(checkoutRepositoryProvider) is RemoteCheckoutRepository;
+      final checkoutRepository = ref.read(checkoutRepositoryProvider);
+      final remote = checkoutRepository is RemoteCheckoutRepository;
+      if (checkoutRepository is RemoteCheckoutRepository) {
+        final recovered = await checkoutRepository.recoverPendingOrder();
+        if (recovered != null) {
+          if (!ref.mounted) return null;
+          ref.read(orderViewModelProvider.notifier).addOrder(recovered);
+          ref.read(orderViewModelProvider.notifier).refresh();
+          if (recovered.status == OrderStatus.cancelled) {
+            state = state.copyWith(
+              errorMessage:
+                  'Đơn hàng trước đã bị hủy. Giỏ hàng vẫn được giữ; vui lòng kiểm tra lịch sử đơn.',
+            );
+            return null;
+          }
+          unawaited(
+            ref
+                .read(cartViewModelProvider.notifier)
+                .reconcilePurchasedItems(
+                  recovered.items.map((item) => item.serverId),
+                ),
+          );
+          return recovered;
+        }
+      }
       final cartRepository = ref.read(cartRepositoryProvider);
       final addressRepository = ref.read(addressRepositoryProvider);
       final cart = remote && cartRepository is RemoteCartRepository
@@ -159,6 +185,13 @@ class CheckoutViewModel extends Notifier<CheckoutState> {
         ref.read(cartViewModelProvider.notifier).clearCart();
       } else {
         ref.read(orderViewModelProvider.notifier).refresh();
+        unawaited(
+          ref
+              .read(cartViewModelProvider.notifier)
+              .reconcilePurchasedItems(
+                order.items.map((item) => item.serverId),
+              ),
+        );
       }
       return order;
     } on PlaceOrderException catch (error) {
@@ -175,10 +208,15 @@ class CheckoutViewModel extends Notifier<CheckoutState> {
         },
       );
       return null;
+    } on ApiException catch (error) {
+      if (!ref.mounted) return null;
+      state = state.copyWith(errorMessage: error.message);
+      return null;
     } catch (_) {
       if (!ref.mounted) return null;
       state = state.copyWith(
-        errorMessage: 'Không thể đặt hàng. Vui lòng thử lại.',
+        errorMessage:
+            'Chưa xác minh được kết quả đặt hàng. Vui lòng kiểm tra kết nối rồi thử lại; ứng dụng sẽ tra cứu đơn cũ trước.',
       );
       return null;
     } finally {

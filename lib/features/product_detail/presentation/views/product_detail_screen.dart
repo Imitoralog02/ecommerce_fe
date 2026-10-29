@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/bouncy_heart_button.dart';
@@ -12,6 +13,7 @@ import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
 import '../../../cart/presentation/views/cart_screen.dart';
 import '../../../checkout/presentation/views/checkout_screen.dart';
 import '../../../home/domain/entities/product_entity.dart';
+import '../../../home/di/home_providers.dart';
 import '../../../wishlist/presentation/viewmodels/wishlist_viewmodel.dart';
 import '../../../support/presentation/views/live_chat_screen.dart';
 import '../../../history/presentation/viewmodels/recently_viewed_viewmodel.dart';
@@ -87,11 +89,23 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
     super.dispose();
   }
 
-  void _handleAddToCart() {
+  Future<void> _handleAddToCart() async {
     final strings = AppLocalizations.of(context);
-    ref
+    final added = await ref
         .read(cartViewModelProvider.notifier)
-        .addToCart(widget.product, _selectedSize, _selectedColorName);
+        .addToCartConfirmed(widget.product, _selectedSize, _selectedColorName);
+    if (!mounted) return;
+    if (!added) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref.read(cartViewModelProvider).errorMessage ??
+                'Không thể thêm sản phẩm vào giỏ hàng.',
+          ),
+        ),
+      );
+      return;
+    }
 
     FlyToCartHelper.run(
       context,
@@ -118,10 +132,22 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
     );
   }
 
-  void _handleBuyNow() {
-    ref
+  Future<void> _handleBuyNow() async {
+    final added = await ref
         .read(cartViewModelProvider.notifier)
-        .addToCart(widget.product, _selectedSize, _selectedColorName);
+        .addToCartConfirmed(widget.product, _selectedSize, _selectedColorName);
+    if (!mounted) return;
+    if (!added) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref.read(cartViewModelProvider).errorMessage ??
+                'Không thể thêm sản phẩm vào giỏ hàng.',
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.push(
       context,
       AppRouter.page(builder: (_) => const CheckoutScreen()),
@@ -416,47 +442,49 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                           ],
                         ],
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            AppRouter.page(
-                              builder: (_) =>
-                                  ProductReviewsScreen(product: product),
-                            ),
-                          );
-                        },
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              size: 16,
-                              color: AppColors.starYellow,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              reviewState
-                                  .averageRating(product)
-                                  .toStringAsFixed(1),
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
+                      if (ref.read(productRepositoryProvider)
+                          is! RemoteProductRepository)
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              AppRouter.page(
+                                builder: (_) =>
+                                    ProductReviewsScreen(product: product),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '(${reviewState.totalCount(product)} đánh giá)',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                                decoration: TextDecoration.underline,
+                            );
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 16,
+                                color: AppColors.starYellow,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 3),
+                              Text(
+                                reviewState
+                                    .averageRating(product)
+                                    .toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '(${reviewState.totalCount(product)} đánh giá)',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -765,34 +793,36 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
           top: false,
           child: Row(
             children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    AppRouter.page(
-                      builder: (_) =>
-                          LiveChatScreen(initialProduct: widget.product),
+              if (ref.read(productRepositoryProvider)
+                  is! RemoteProductRepository)
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      AppRouter.page(
+                        builder: (_) =>
+                            LiveChatScreen(initialProduct: widget.product),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.studioGray,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: AppColors.cardBorder),
                     ),
-                  );
-                },
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  margin: const EdgeInsets.only(right: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.studioGray,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.cardBorder),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.chat_bubble_outline_rounded,
-                      size: 19,
-                      color: AppColors.textPrimary,
+                    child: const Center(
+                      child: Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 19,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ),
-              ),
               Expanded(
                 child: SizedBox(
                   height: 48,

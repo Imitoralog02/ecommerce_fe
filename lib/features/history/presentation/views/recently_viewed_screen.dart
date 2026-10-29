@@ -215,17 +215,23 @@ class RecentlyViewedScreen extends ConsumerWidget {
                                 ),
                               );
                             },
-                            onQuickAdd: () {
-                              ref
+                            onQuickAdd: () async {
+                              final added = await ref
                                   .read(cartViewModelProvider.notifier)
-                                  .addToCart(product);
+                                  .addToCartConfirmed(product);
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(
                                 context,
                               ).hideCurrentSnackBar();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    'Đã thêm "${product.title}" vào giỏ hàng 🛒',
+                                    added
+                                        ? 'Đã thêm "${product.title}" vào giỏ hàng 🛒'
+                                        : ref
+                                                  .read(cartViewModelProvider)
+                                                  .errorMessage ??
+                                              'Không thể thêm sản phẩm vào giỏ hàng.',
                                   ),
                                   backgroundColor: AppColors.brandBlack,
                                   behavior: SnackBarBehavior.floating,

@@ -1,6 +1,6 @@
 # Lộ trình hoàn thiện frontend NÉORA
 
-Cập nhật tích hợp: 23/10/2026. Frontend đã nối API Gateway cho đăng nhập, catalog, giỏ, địa chỉ, wishlist, COD, lịch sử đơn và thông báo. Các mục hoàn thành bên dưới mô tả đợt phát triển demo trước đó; thanh toán điện tử, voucher/xu, tracking chi tiết, review, đổi trả và hỗ trợ vẫn là demo. Kiến trúc dùng `domain` / `data` / `presentation`, ViewModel với Riverpod và repository qua provider.
+Cập nhật tích hợp: 28/10/2026. Frontend đã nối API Gateway cho đăng nhập, catalog, giỏ, địa chỉ, wishlist, COD, lịch sử đơn, hồ sơ cơ bản và thông báo. COD lưu mã yêu cầu để tra cứu sau mất mạng; đơn chưa hoàn tất được làm mới định kỳ. Các mục hoàn thành bên dưới mô tả đợt phát triển demo trước đó; thanh toán điện tử, voucher/xu, đánh giá, đổi trả và hỗ trợ vẫn là demo, đã ẩn các lối vào chính khi dùng API thật. Kiến trúc dùng `domain` / `data` / `presentation`, ViewModel với Riverpod và repository qua provider.
 
 ## Đã hoàn thành trong đợt này
 
@@ -59,8 +59,9 @@ Cập nhật tích hợp: 23/10/2026. Frontend đã nối API Gateway cho đăng
 
 ## Chờ hợp đồng backend
 
-- [ ] Thay các repository mock bằng data source/API cho tài khoản, catalog, giỏ, địa chỉ, voucher, đơn hàng, thanh toán, thông báo, media và hỗ trợ.
+- [x] Dùng API cho tài khoản, catalog, giỏ, địa chỉ, wishlist, COD, lịch sử đơn và thông báo.
+- [ ] Bổ sung API cho voucher/xu, thanh toán điện tử, đánh giá, đổi trả, media và hỗ trợ trước khi bật các màn này ở chế độ API thật.
 - [ ] Xác định OpenAPI/base URL, xác thực, cấu trúc lỗi, phân trang, retry, đồng bộ dữ liệu và môi trường dev/staging/prod.
 - [ ] Chỉ bật thanh toán điện tử, xác thực sinh trắc học/2FA, xoá tài khoản và thông báo đẩy khi có dịch vụ tương ứng và kiểm thử đầu cuối.
 
-Không coi đơn hàng hay tài khoản demo là giao dịch/dữ liệu thật. Các mục chờ backend sẽ được triển khai sau khi có hợp đồng API.
+Không coi dữ liệu ở các màn demo là giao dịch/dữ liệu thật. Các mục chờ backend sẽ được triển khai sau khi có hợp đồng API tương ứng.

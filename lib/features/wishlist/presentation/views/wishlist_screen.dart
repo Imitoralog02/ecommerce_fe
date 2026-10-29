@@ -38,9 +38,12 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
         _ => strings.categoryAll,
       };
 
-  void _handleQuickAddToCart(ProductEntity product) {
+  Future<void> _handleQuickAddToCart(ProductEntity product) async {
     final strings = AppLocalizations.of(context);
-    ref.read(cartViewModelProvider.notifier).addToCart(product);
+    final added = await ref
+        .read(cartViewModelProvider.notifier)
+        .addToCartConfirmed(product);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -54,7 +57,10 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                strings.addedWishlistProductToCart(product.title),
+                added
+                    ? strings.addedWishlistProductToCart(product.title)
+                    : ref.read(cartViewModelProvider).errorMessage ??
+                          'Không thể thêm sản phẩm vào giỏ hàng.',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w700),
@@ -180,6 +186,20 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
       ),
       body: Column(
         children: [
+          if (wishlistState.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(child: Text(wishlistState.errorMessage!)),
+                  TextButton(
+                    onPressed: () =>
+                        ref.read(wishlistViewModelProvider.notifier).refresh(),
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            ),
           // 1. Horizontal Category Filter Chips
           Container(
             height: 48,

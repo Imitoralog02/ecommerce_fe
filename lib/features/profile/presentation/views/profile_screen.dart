@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../address/presentation/viewmodels/address_viewmodel.dart';
@@ -37,6 +38,44 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final remoteMode = ref.read(authRepositoryProvider) is RemoteAuthRepository;
+    if (remoteMode && !ref.watch(authViewModelProvider).isAuthenticated) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('NÉORA', style: AppTypography.brandLogo),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Bạn chưa đăng nhập',
+                    style: AppTypography.editorialTitle,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Đăng nhập để xem địa chỉ, danh sách yêu thích và đơn hàng của bạn.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      AppRouter.page(builder: (_) => const AuthScreen()),
+                    ),
+                    child: const Text('Đăng nhập'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final walletState = ref.watch(walletViewModelProvider);
     final userSettings = ref.watch(settingsViewModelProvider);
     final wishlistCount = ref.watch(wishlistViewModelProvider).items.length;
@@ -63,11 +102,19 @@ class ProfileScreen extends ConsumerWidget {
     final shippingOrders = orderState.getOrdersByStatus(OrderStatus.shipping);
     final activeOrder = shippingOrders.isNotEmpty
         ? shippingOrders.first
-        : (orderState.orders.isNotEmpty ? orderState.orders.first : null);
+        : (remoteMode
+              ? orderState.orders
+                    .where(
+                      (order) =>
+                          order.status == OrderStatus.pendingConfirmation ||
+                          order.status == OrderStatus.processing,
+                    )
+                    .firstOrNull
+              : orderState.orders.firstOrNull);
 
-    final defaultAddress = addressState.addresses.isNotEmpty
-        ? addressState.addresses.first.fullAddress
-        : 'Số 12 ngõ 45 phố Láng Hạ, Đống Đa, Hà Nội';
+    final defaultAddress =
+        addressState.selectedAddress?.fullAddress ??
+        'Chưa có địa chỉ giao hàng';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -181,33 +228,44 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 14),
 
               // 3. High-End Obsidian & Champagne Privilege VIP Card
-              _buildPrivilegeVipCard(
-                context,
-                profileName: profile.name,
-                profileContact: profile.phone.isNotEmpty
-                    ? profile.phone
-                    : profile.email,
-                initials: _initials(profile.name),
-                tierName: walletState.memberTier.isNotEmpty
-                    ? walletState.memberTier
-                    : 'Hạng Bạc (Silver)',
-                coinsToNextTier: walletState.coinsToNextTier > 0
-                    ? walletState.coinsToNextTier
-                    : 450,
-                tierProgress: walletState.tierProgress > 0
-                    ? walletState.tierProgress
-                    : 0.68,
-              ),
+              if (remoteMode)
+                Card(
+                  child: ListTile(
+                    title: Text(profile.name),
+                    subtitle: Text(
+                      profile.phone.isNotEmpty ? profile.phone : profile.email,
+                    ),
+                  ),
+                )
+              else
+                _buildPrivilegeVipCard(
+                  context,
+                  profileName: profile.name,
+                  profileContact: profile.phone.isNotEmpty
+                      ? profile.phone
+                      : profile.email,
+                  initials: _initials(profile.name),
+                  tierName: walletState.memberTier.isNotEmpty
+                      ? walletState.memberTier
+                      : 'Hạng Bạc (Silver)',
+                  coinsToNextTier: walletState.coinsToNextTier > 0
+                      ? walletState.coinsToNextTier
+                      : 450,
+                  tierProgress: walletState.tierProgress > 0
+                      ? walletState.tierProgress
+                      : 0.68,
+                ),
               const SizedBox(height: 16),
 
               // 4. Financial & Wardrobe Metrics (4-Column Bento Box)
-              _buildMetricBentoBox(
-                context,
-                coinBalance: walletState.formattedCoinBalance,
-                voucherCount: walletState.vouchers.length,
-                wishlistCount: wishlistCount,
-                savedLooksCount: 3,
-              ),
+              if (!remoteMode)
+                _buildMetricBentoBox(
+                  context,
+                  coinBalance: walletState.formattedCoinBalance,
+                  voucherCount: walletState.vouchers.length,
+                  wishlistCount: wishlistCount,
+                  savedLooksCount: 3,
+                ),
               const SizedBox(height: 20),
 
               // 5. Đơn hàng của tôi (My Orders Hub)
@@ -262,7 +320,9 @@ class ProfileScreen extends ConsumerWidget {
                         context,
                         title: 'Chờ xác nhận',
                         icon: Icons.receipt_long_outlined,
-                        count: pendingCount > 0 ? pendingCount : 1,
+                        count: remoteMode
+                            ? pendingCount
+                            : (pendingCount > 0 ? pendingCount : 1),
                         tabIndex: 1,
                       ),
                     ),
@@ -280,16 +340,20 @@ class ProfileScreen extends ConsumerWidget {
                         context,
                         title: 'Đang giao',
                         icon: Icons.local_shipping_outlined,
-                        count: shippingCount > 0 ? shippingCount : 1,
+                        count: remoteMode
+                            ? shippingCount
+                            : (shippingCount > 0 ? shippingCount : 1),
                         tabIndex: 3,
                       ),
                     ),
                     Expanded(
                       child: _buildOrderStatusItem(
                         context,
-                        title: 'Đánh giá',
+                        title: remoteMode ? 'Đã giao' : 'Đánh giá',
                         icon: Icons.star_outline_rounded,
-                        count: deliveredCount > 0 ? deliveredCount : 2,
+                        count: remoteMode
+                            ? deliveredCount
+                            : (deliveredCount > 0 ? deliveredCount : 2),
                         tabIndex: 4,
                       ),
                     ),
@@ -306,17 +370,21 @@ class ProfileScreen extends ConsumerWidget {
                   orderStatus: activeOrder.status.label,
                   itemSummary: activeOrder.items.isNotEmpty
                       ? '${activeOrder.items.first.product.title} (${activeOrder.items.length} món)'
-                      : 'Bộ trang phục công sở NÉORA',
+                      : 'Xem chi tiết đơn hàng',
                 ),
               const SizedBox(height: 20),
 
               // 6. Figma Screen 13: STYLIST CỦA RIÊNG BẠN (Capsule Styling Consultation)
-              _buildStylistProfileCard(context),
-              const SizedBox(height: 20),
+              if (!remoteMode) ...[
+                _buildStylistProfileCard(context),
+                const SizedBox(height: 20),
+              ],
 
               // 7. NÉORA Care & Daily Rewards (3 Highlight Services)
-              _buildExclusivePerksStrip(context, ref, walletState),
-              const SizedBox(height: 24),
+              if (!remoteMode) ...[
+                _buildExclusivePerksStrip(context, ref, walletState),
+                const SizedBox(height: 24),
+              ],
 
               // 8. QUẢN LÝ TÀI KHOẢN (Account & Addresses)
               const Text(
@@ -349,44 +417,46 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    const Divider(height: 1, color: AppColors.divider),
-                    _buildMenuRow(
-                      icon: Icons.confirmation_number_outlined,
-                      title: 'Ví & Voucher ưu đãi',
-                      subtitle: '${walletState.vouchers.length} mã khả dụng',
-                      badgeText: '${walletState.vouchers.length}',
-                      onTap: () => Navigator.push(
-                        context,
-                        AppRouter.page(
-                          builder: (_) =>
-                              const VoucherWalletScreen(initialTab: 0),
+                    if (!remoteMode) ...[
+                      const Divider(height: 1, color: AppColors.divider),
+                      _buildMenuRow(
+                        icon: Icons.confirmation_number_outlined,
+                        title: 'Ví & Voucher ưu đãi',
+                        subtitle: '${walletState.vouchers.length} mã khả dụng',
+                        badgeText: '${walletState.vouchers.length}',
+                        onTap: () => Navigator.push(
+                          context,
+                          AppRouter.page(
+                            builder: (_) =>
+                                const VoucherWalletScreen(initialTab: 0),
+                          ),
                         ),
                       ),
-                    ),
-                    const Divider(height: 1, color: AppColors.divider),
-                    _buildMenuRow(
-                      icon: Icons.credit_card_outlined,
-                      title: 'Phương thức thanh toán',
-                      subtitle: 'Visa •••• 4242, MoMo, COD',
-                      onTap: () => Navigator.push(
-                        context,
-                        AppRouter.page(
-                          builder: (_) => const PaymentMethodsScreen(),
+                      const Divider(height: 1, color: AppColors.divider),
+                      _buildMenuRow(
+                        icon: Icons.credit_card_outlined,
+                        title: 'Phương thức thanh toán',
+                        subtitle: 'Visa •••• 4242, MoMo, COD',
+                        onTap: () => Navigator.push(
+                          context,
+                          AppRouter.page(
+                            builder: (_) => const PaymentMethodsScreen(),
+                          ),
                         ),
                       ),
-                    ),
-                    const Divider(height: 1, color: AppColors.divider),
-                    _buildMenuRow(
-                      icon: Icons.history_rounded,
-                      title: 'Đã xem gần đây',
-                      subtitle: 'Các thiết kế bạn vừa khám phá',
-                      onTap: () => Navigator.push(
-                        context,
-                        AppRouter.page(
-                          builder: (_) => const RecentlyViewedScreen(),
+                      const Divider(height: 1, color: AppColors.divider),
+                      _buildMenuRow(
+                        icon: Icons.history_rounded,
+                        title: 'Đã xem gần đây',
+                        subtitle: 'Các thiết kế bạn vừa khám phá',
+                        onTap: () => Navigator.push(
+                          context,
+                          AppRouter.page(
+                            builder: (_) => const RecentlyViewedScreen(),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -421,30 +491,32 @@ class ProfileScreen extends ConsumerWidget {
                         AppRouter.page(builder: (_) => const SettingsScreen()),
                       ),
                     ),
-                    const Divider(height: 1, color: AppColors.divider),
-                    _buildMenuRow(
-                      icon: Icons.support_agent_outlined,
-                      title: 'Trung tâm trợ giúp NÉORA',
-                      subtitle: 'Câu hỏi thường gặp và chat tư vấn mẫu',
-                      onTap: () => Navigator.push(
-                        context,
-                        AppRouter.page(
-                          builder: (_) => const HelpCenterScreen(),
+                    if (!remoteMode) ...[
+                      const Divider(height: 1, color: AppColors.divider),
+                      _buildMenuRow(
+                        icon: Icons.support_agent_outlined,
+                        title: 'Trung tâm trợ giúp NÉORA',
+                        subtitle: 'Câu hỏi thường gặp và chat tư vấn mẫu',
+                        onTap: () => Navigator.push(
+                          context,
+                          AppRouter.page(
+                            builder: (_) => const HelpCenterScreen(),
+                          ),
                         ),
                       ),
-                    ),
-                    const Divider(height: 1, color: AppColors.divider),
-                    _buildMenuRow(
-                      icon: Icons.verified_user_outlined,
-                      title: 'Chính sách bảo mật & Đổi trả 30 ngày',
-                      subtitle: 'Thông tin chính sách trong bản demo',
-                      onTap: () => Navigator.push(
-                        context,
-                        AppRouter.page(
-                          builder: (_) => const HelpCenterScreen(),
+                      const Divider(height: 1, color: AppColors.divider),
+                      _buildMenuRow(
+                        icon: Icons.verified_user_outlined,
+                        title: 'Chính sách bảo mật & Đổi trả 30 ngày',
+                        subtitle: 'Thông tin chính sách trong bản demo',
+                        onTap: () => Navigator.push(
+                          context,
+                          AppRouter.page(
+                            builder: (_) => const HelpCenterScreen(),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                     const Divider(height: 1, color: AppColors.divider),
                     _buildMenuRow(
                       icon: Icons.logout_rounded,

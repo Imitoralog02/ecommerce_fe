@@ -50,6 +50,7 @@ class WishlistState {
 }
 
 class WishlistViewModel extends Notifier<WishlistState> {
+  int _syncGeneration = 0;
   @override
   WishlistState build() {
     final repository = ref.read(wishlistRepositoryProvider);
@@ -62,13 +63,28 @@ class WishlistViewModel extends Notifier<WishlistState> {
   void _saveItems(List<ProductEntity> items) {
     final repository = ref.read(wishlistRepositoryProvider);
     if (repository is RemoteWishlistRepository) {
+      final generation = ++_syncGeneration;
       repository
           .synchronize(items)
           .then((remote) {
-            if (ref.mounted) state = state.copyWith(items: remote);
+            if (ref.mounted && generation == _syncGeneration) {
+              state = state.copyWith(items: remote);
+            }
           })
-          .catchError((Object error) {
-            if (ref.mounted) state = state.copyWith(errorMessage: '$error');
+          .catchError((Object error) async {
+            try {
+              final actual = await repository.refresh();
+              if (ref.mounted && generation == _syncGeneration) {
+                state = state.copyWith(items: actual, errorMessage: '$error');
+              }
+            } catch (_) {
+              if (ref.mounted && generation == _syncGeneration) {
+                state = state.copyWith(
+                  items: repository.getItems(),
+                  errorMessage: '$error',
+                );
+              }
+            }
           });
     } else {
       repository.saveItems(items);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
@@ -28,8 +30,11 @@ class OrderState {
 }
 
 class OrderViewModel extends Notifier<OrderState> {
+  Timer? _statusTimer;
+
   @override
   OrderState build() {
+    ref.onDispose(() => _statusTimer?.cancel());
     if (ref.read(orderRepositoryProvider) is RemoteOrderRepository) {
       Future.microtask(() => refresh());
     }
@@ -41,9 +46,15 @@ class OrderViewModel extends Notifier<OrderState> {
     if (repository is! RemoteOrderRepository) return;
     try {
       final orders = await repository.refresh();
-      if (ref.mounted) state = state.copyWith(orders: orders);
+      if (ref.mounted) {
+        state = state.copyWith(orders: orders);
+        _scheduleStatusRefresh();
+      }
     } catch (error) {
-      if (ref.mounted) state = state.copyWith(errorMessage: '$error');
+      if (ref.mounted) {
+        state = state.copyWith(errorMessage: '$error');
+        _scheduleStatusRefresh();
+      }
     }
   }
 
@@ -63,6 +74,20 @@ class OrderViewModel extends Notifier<OrderState> {
   void addOrder(OrderEntity order) {
     final repository = ref.read(orderRepositoryProvider)..saveOrder(order);
     state = state.copyWith(orders: repository.getOrders());
+    _scheduleStatusRefresh();
+  }
+
+  void _scheduleStatusRefresh() {
+    _statusTimer?.cancel();
+    if (ref.read(orderRepositoryProvider) is! RemoteOrderRepository ||
+        !state.orders.any(
+          (order) =>
+              order.status != OrderStatus.delivered &&
+              order.status != OrderStatus.cancelled,
+        )) {
+      return;
+    }
+    _statusTimer = Timer(const Duration(seconds: 30), refresh);
   }
 
   bool cancelOrder(String orderId) {

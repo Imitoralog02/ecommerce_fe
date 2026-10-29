@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
@@ -279,21 +280,23 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                           ),
                         ),
                       ),
-                    GestureDetector(
-                      onTap: () => AIVisualSearchDialog.show(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.softPeach,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt_outlined,
-                          size: 16,
-                          color: AppColors.primary,
+                    if (ref.read(productRepositoryProvider)
+                        is! RemoteProductRepository)
+                      GestureDetector(
+                        onTap: () => AIVisualSearchDialog.show(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.softPeach,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_outlined,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),

@@ -34,6 +34,11 @@ class _MainNavScreenState extends ConsumerState<MainNavScreen> {
     if (_currentIndex == index) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _currentIndex = index);
+    if (index == 2) {
+      ref.read(notificationViewModelProvider.notifier).refresh();
+    } else if (index == 3) {
+      ref.read(cartViewModelProvider.notifier).refreshFromServer();
+    }
   }
 
   @override

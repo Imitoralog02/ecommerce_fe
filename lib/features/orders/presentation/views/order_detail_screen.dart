@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/product_visual_widget.dart';
 import '../../../product_detail/presentation/views/product_detail_screen.dart';
@@ -11,6 +12,7 @@ import '../../../reviews/presentation/views/write_review_screen.dart';
 import '../../../support/presentation/views/live_chat_screen.dart';
 import '../../../tracking/presentation/views/order_tracking_screen.dart';
 import '../../domain/entities/order_entity.dart';
+import '../../di/order_providers.dart';
 import '../viewmodels/order_viewmodel.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
@@ -145,25 +147,26 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.chat_outlined,
-              size: 20,
-              color: AppColors.textPrimary,
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                AppRouter.page(
-                  builder: (_) => LiveChatScreen(
-                    initialProduct: _currentOrder.items.isNotEmpty
-                        ? _currentOrder.items.first.product
-                        : null,
+          if (ref.read(orderRepositoryProvider) is! RemoteOrderRepository)
+            IconButton(
+              icon: const Icon(
+                Icons.chat_outlined,
+                size: 20,
+                color: AppColors.textPrimary,
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  AppRouter.page(
+                    builder: (_) => LiveChatScreen(
+                      initialProduct: _currentOrder.items.isNotEmpty
+                          ? _currentOrder.items.first.product
+                          : null,
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
         ],
       ),
       bottomNavigationBar: _buildBottomActionBar(context),
@@ -210,19 +213,19 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
     if (status == OrderStatus.delivered) {
       statusIcon = Icons.task_alt_rounded;
-      statusSubtitle = 'Đơn mẫu đã được đánh dấu là đã giao.';
+      statusSubtitle = 'Đơn hàng đã được giao.';
     } else if (status == OrderStatus.shipping) {
       statusIcon = Icons.local_shipping_rounded;
-      statusSubtitle = 'Đơn mẫu đang ở trạng thái giao hàng.';
+      statusSubtitle = 'Đơn hàng đang được giao.';
     } else if (status == OrderStatus.processing) {
       statusIcon = Icons.inventory_2_outlined;
-      statusSubtitle = 'Đơn mẫu đang được xử lý.';
+      statusSubtitle = 'Đơn hàng đang được xử lý.';
     } else if (status == OrderStatus.pendingConfirmation) {
       statusIcon = Icons.hourglass_top_rounded;
-      statusSubtitle = 'Đơn mẫu đang chờ xác nhận.';
+      statusSubtitle = 'Đơn hàng đang chờ xác nhận.';
     } else if (status == OrderStatus.cancelled) {
       statusIcon = Icons.cancel_outlined;
-      statusSubtitle = 'Đơn hàng đã được huỷ theo yêu cầu.';
+      statusSubtitle = 'Đơn hàng đã bị hủy.';
     }
 
     // Step index for progress bar
@@ -859,7 +862,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           ],
 
           // If Delivered: 30-Day Returns + Review buttons
-          if (status == OrderStatus.delivered) ...[
+          if (status == OrderStatus.delivered &&
+              ref.read(orderRepositoryProvider) is! RemoteOrderRepository) ...[
             Expanded(
               child: OutlinedButton(
                 onPressed: () {

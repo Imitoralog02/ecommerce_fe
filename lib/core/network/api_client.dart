@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -34,19 +35,24 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  ApiClient({http.Client? client, SessionStorage? storage, String? baseUrl})
-    : _client = client ?? http.Client(),
-      _storage = storage ?? const SecureSessionStorage(),
-      baseUrl =
-          baseUrl ??
-          const String.fromEnvironment(
-            'API_BASE_URL',
-            defaultValue: 'http://10.0.2.2:8080/api/v1',
-          );
+  ApiClient({
+    http.Client? client,
+    SessionStorage? storage,
+    String? baseUrl,
+    this.requestTimeout = const Duration(seconds: 20),
+  }) : _client = client ?? http.Client(),
+       _storage = storage ?? const SecureSessionStorage(),
+       baseUrl =
+           baseUrl ??
+           const String.fromEnvironment(
+             'API_BASE_URL',
+             defaultValue: 'http://10.0.2.2:8080/api/v1',
+           );
 
   final http.Client _client;
   final SessionStorage _storage;
   final String baseUrl;
+  final Duration requestTimeout;
   String? _accessToken;
   String? _refreshToken;
   Future<void>? _refreshing;
@@ -156,9 +162,20 @@ class ApiClient {
       request.headers['Authorization'] = 'Bearer $_accessToken';
     }
     if (headers != null) request.headers.addAll(headers);
-    final response = await http.Response.fromStream(
-      await _client.send(request),
-    );
+    late final http.Response response;
+    try {
+      response = await _client
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(requestTimeout);
+    } on http.ClientException {
+      throw const ApiException(
+        503,
+        'Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.',
+      );
+    } on TimeoutException {
+      throw const ApiException(503, 'Kết nối quá lâu. Vui lòng thử lại.');
+    }
     if (response.statusCode == 401 && auth && retry && _refreshToken != null) {
       try {
         await _refreshOnce();

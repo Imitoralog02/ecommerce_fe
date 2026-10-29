@@ -541,14 +541,20 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                       children: [
                         if (isSlotActive && remaining > 0)
                           ElevatedButton(
-                            onPressed: () {
-                              ref
+                            onPressed: () async {
+                              final added = await ref
                                   .read(cartViewModelProvider.notifier)
-                                  .addToCart(product);
+                                  .addToCartConfirmed(product);
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    'Đã thêm "${product.title}" vào giỏ hàng chớp nhoáng ⚡',
+                                    added
+                                        ? 'Đã thêm "${product.title}" vào giỏ hàng chớp nhoáng ⚡'
+                                        : ref
+                                                  .read(cartViewModelProvider)
+                                                  .errorMessage ??
+                                              'Không thể thêm sản phẩm vào giỏ hàng.',
                                   ),
                                   backgroundColor: AppColors.brandBlack,
                                   behavior: SnackBarBehavior.floating,

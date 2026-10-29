@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../auth/di/auth_providers.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../di/settings_providers.dart';
 import '../../domain/entities/user_settings.dart';
 
@@ -22,8 +24,22 @@ class SettingsViewModel extends Notifier<UserSettings> {
     state = next;
   }
 
-  void updateProfile(UserProfile profile) =>
-      _save(state.copyWith(profile: profile));
+  Future<void> updateProfile(UserProfile profile) async {
+    final auth = ref.read(authRepositoryProvider);
+    if (auth is RemoteAuthRepository) {
+      final updated = await auth.updateProfile(
+        fullName: profile.name,
+        phone: profile.phone,
+      );
+      profile = profile.copyWith(
+        name: updated['fullName'] as String? ?? profile.name,
+        phone: updated['phone'] as String? ?? profile.phone,
+        email: updated['email'] as String? ?? state.profile.email,
+      );
+    }
+    _save(state.copyWith(profile: profile));
+  }
+
   void setLanguage(String languageCode) {
     if (languageCode != 'vi' && languageCode != 'en') return;
     _save(state.copyWith(languageCode: languageCode));

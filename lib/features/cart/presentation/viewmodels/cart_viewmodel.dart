@@ -87,19 +87,7 @@ class CartViewModel extends Notifier<CartState> {
   CartState build() {
     final repository = ref.read(cartRepositoryProvider);
     if (repository is RemoteCartRepository) {
-      Future.microtask(() async {
-        try {
-          final snapshot = await repository.refresh();
-          if (ref.mounted) {
-            state = state.copyWith(
-              items: snapshot.items,
-              shippingFee: snapshot.shippingFee,
-            );
-          }
-        } catch (error) {
-          if (ref.mounted) state = state.copyWith(errorMessage: '$error');
-        }
-      });
+      Future.microtask(refreshFromServer);
     }
     final snapshot = repository.load();
     final wallet = ref.read(walletRepositoryProvider).load();
@@ -120,10 +108,58 @@ class CartViewModel extends Notifier<CartState> {
         : loaded;
   }
 
+  Future<void> refreshFromServer() async {
+    final repository = ref.read(cartRepositoryProvider);
+    if (repository is! RemoteCartRepository ||
+        !repository.api.isAuthenticated) {
+      return;
+    }
+    final generation = _syncGeneration;
+    try {
+      final snapshot = await repository.refresh();
+      if (ref.mounted && generation == _syncGeneration) {
+        state = state.copyWith(
+          items: snapshot.items,
+          shippingFee: snapshot.shippingFee,
+          errorMessage: '',
+        );
+      }
+    } catch (error) {
+      if (ref.mounted && generation == _syncGeneration) {
+        state = state.copyWith(errorMessage: '$error');
+      }
+    }
+  }
+
+  Future<void> reconcilePurchasedItems(
+    Iterable<String?> purchasedItemIds, {
+    List<Duration> retryDelays = const [
+      Duration(seconds: 5),
+      Duration(seconds: 5),
+      Duration(seconds: 5),
+      Duration(seconds: 5),
+      Duration(seconds: 5),
+      Duration(seconds: 5),
+    ],
+  }) async {
+    final ids = purchasedItemIds.whereType<String>().toSet();
+    await refreshFromServer();
+    for (final delay in retryDelays) {
+      if (!ref.mounted ||
+          (state.errorMessage?.isEmpty != false &&
+              !state.items.any((item) => ids.contains(item.serverId)))) {
+        return;
+      }
+      await Future<void>.delayed(delay);
+      if (!ref.mounted) return;
+      await refreshFromServer();
+    }
+  }
+
   void _emit(CartState next) {
     final repository = ref.read(cartRepositoryProvider);
     if (repository is RemoteCartRepository) {
-      state = next;
+      state = next.copyWith(errorMessage: '');
       final generation = ++_syncGeneration;
       repository
           .synchronize(CartSnapshot(items: next.items))
@@ -148,7 +184,10 @@ class CartViewModel extends Notifier<CartState> {
               }
             } catch (_) {
               if (ref.mounted && generation == _syncGeneration) {
-                state = state.copyWith(errorMessage: '$error');
+                state = state.copyWith(
+                  items: repository.load().items,
+                  errorMessage: '$error',
+                );
               }
             }
           });
@@ -213,6 +252,64 @@ class CartViewModel extends Notifier<CartState> {
           ],
         ),
       );
+    }
+    return true;
+  }
+
+  Future<bool> addToCartConfirmed(
+    ProductEntity product, [
+    String? size,
+    String? color,
+  ]) async {
+    final selectedSize = size ?? product.availableSizes.firstOrNull;
+    final selectedColor = color ?? product.colorNames.firstOrNull;
+    if (selectedSize == null || selectedColor == null) return false;
+    final repository = ref.read(cartRepositoryProvider);
+    if (repository is RemoteCartRepository) {
+      try {
+        final response =
+            await repository.api.get(
+                  '/products/${Uri.encodeComponent(product.id)}/availability',
+                  query: {'size': selectedSize, 'color': selectedColor},
+                )
+                as Map<String, dynamic>;
+        final available = response['available'] as int? ?? 0;
+        final inCart = state.items
+            .where(
+              (item) =>
+                  item.product.id == product.id &&
+                  item.selectedSize == selectedSize &&
+                  item.selectedColor == selectedColor,
+            )
+            .fold<int>(0, (sum, item) => sum + item.quantity);
+        if (available <= inCart) {
+          state = state.copyWith(
+            errorMessage: 'Sản phẩm đã hết hàng cho phân loại này.',
+          );
+          return false;
+        }
+      } catch (error) {
+        state = state.copyWith(errorMessage: '$error');
+        return false;
+      }
+    }
+    if (!addToCart(product, selectedSize, selectedColor)) return false;
+    if (repository is RemoteCartRepository) {
+      try {
+        await repository.settle();
+        final confirmed = await repository.refresh();
+        if (ref.mounted) {
+          state = state.copyWith(items: confirmed.items, errorMessage: '');
+        }
+      } catch (error) {
+        if (ref.mounted) {
+          state = state.copyWith(
+            items: repository.load().items,
+            errorMessage: '$error',
+          );
+        }
+        return false;
+      }
     }
     return true;
   }

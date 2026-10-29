@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
 import '../../../../core/connectivity/presentation/demo_connectivity_mode.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../address/presentation/views/address_book_screen.dart';
+import '../../../auth/di/auth_providers.dart';
 import '../../../payment_methods/presentation/views/payment_methods_screen.dart';
 import '../../domain/entities/user_settings.dart';
 import '../viewmodels/settings_viewmodel.dart';
@@ -172,11 +174,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 14),
 
                 // Email
-                _buildFieldLabel('Email liên hệ'),
+                _buildFieldLabel('Email đăng nhập (không chỉnh sửa tại đây)'),
                 _buildTextField(
                   emailCtrl,
                   'Nhập email',
                   keyboardType: TextInputType.emailAddress,
+                  readOnly: true,
                 ),
                 const SizedBox(height: 14),
 
@@ -235,18 +238,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: () {
-                      ref
-                          .read(settingsViewModelProvider.notifier)
-                          .updateProfile(
-                            UserProfile(
-                              name: nameCtrl.text.trim(),
-                              phone: phoneCtrl.text.trim(),
-                              email: emailCtrl.text.trim(),
-                              birthday: birthdayCtrl.text.trim(),
-                              gender: selectedGender,
-                            ),
-                          );
+                    onPressed: () async {
+                      try {
+                        await ref
+                            .read(settingsViewModelProvider.notifier)
+                            .updateProfile(
+                              UserProfile(
+                                name: nameCtrl.text.trim(),
+                                phone: phoneCtrl.text.trim(),
+                                email: emailCtrl.text.trim(),
+                                birthday: birthdayCtrl.text.trim(),
+                                gender: selectedGender,
+                              ),
+                            );
+                      } catch (error) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          SnackBar(
+                            content: Text('Không lưu được hồ sơ: $error'),
+                          ),
+                        );
+                        return;
+                      }
+                      if (!mounted || !ctx.mounted) return;
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -440,6 +454,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final remoteMode = ref.read(authRepositoryProvider) is RemoteAuthRepository;
     final strings = AppLocalizations.of(context);
     final settings = ref.watch(settingsViewModelProvider);
     final settingsNotifier = ref.read(settingsViewModelProvider.notifier);
@@ -514,18 +529,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 );
               },
             ),
-            const Divider(height: 1, color: Color(0xFFF0EBE3)),
-            _buildSettingTile(
-              icon: Icons.credit_card_outlined,
-              title: 'Phương thức thanh toán & Thẻ',
-              subtitle: 'Quản lý thẻ ngân hàng & ví điện tử',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  AppRouter.page(builder: (_) => const PaymentMethodsScreen()),
-                );
-              },
-            ),
+            if (!remoteMode) ...[
+              const Divider(height: 1, color: Color(0xFFF0EBE3)),
+              _buildSettingTile(
+                icon: Icons.credit_card_outlined,
+                title: 'Phương thức thanh toán & Thẻ',
+                subtitle: 'Quản lý thẻ ngân hàng & ví điện tử',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    AppRouter.page(
+                      builder: (_) => const PaymentMethodsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ]),
 
           const SizedBox(height: 20),
@@ -557,55 +576,59 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ]),
 
-          const SizedBox(height: 20),
+          if (!remoteMode) ...[
+            const SizedBox(height: 20),
 
-          // 3. Thông báo đẩy
-          _buildSectionHeader('CÀI ĐẶT THÔNG BÁO'),
-          _buildCardWrapper([
-            _buildSwitchTile(
-              icon: Icons.local_shipping_outlined,
-              title: 'Cập nhật đơn hàng',
-              subtitle: 'Nhận thông báo khi bưu kiện thay đổi lộ trình',
-              value: settings.notifyOrders,
-              onChanged: settingsNotifier.setOrderNotifications,
-            ),
-            const Divider(height: 1, color: Color(0xFFF0EBE3)),
-            _buildSwitchTile(
-              icon: Icons.card_giftcard_rounded,
-              title: 'Ưu đãi & Voucher VIP',
-              subtitle: 'Nhận tin voucher mới và sự kiện Flash Sale',
-              value: settings.notifyPromotions,
-              onChanged: settingsNotifier.setPromotionNotifications,
-            ),
-            const Divider(height: 1, color: Color(0xFFF0EBE3)),
-            _buildSwitchTile(
-              icon: Icons.support_agent_rounded,
-              title: 'Tin nhắn Stylist Concierge',
-              subtitle: 'Nhắc nhở khi stylist phản hồi tư vấn',
-              value: settings.notifyStylist,
-              onChanged: settingsNotifier.setStylistNotifications,
-            ),
-          ]),
+            // 3. Thông báo đẩy
+            _buildSectionHeader('CÀI ĐẶT THÔNG BÁO'),
+            _buildCardWrapper([
+              _buildSwitchTile(
+                icon: Icons.local_shipping_outlined,
+                title: 'Cập nhật đơn hàng',
+                subtitle: 'Nhận thông báo khi bưu kiện thay đổi lộ trình',
+                value: settings.notifyOrders,
+                onChanged: settingsNotifier.setOrderNotifications,
+              ),
+              const Divider(height: 1, color: Color(0xFFF0EBE3)),
+              _buildSwitchTile(
+                icon: Icons.card_giftcard_rounded,
+                title: 'Ưu đãi & Voucher VIP',
+                subtitle: 'Nhận tin voucher mới và sự kiện Flash Sale',
+                value: settings.notifyPromotions,
+                onChanged: settingsNotifier.setPromotionNotifications,
+              ),
+              const Divider(height: 1, color: Color(0xFFF0EBE3)),
+              _buildSwitchTile(
+                icon: Icons.support_agent_rounded,
+                title: 'Tin nhắn Stylist Concierge',
+                subtitle: 'Nhắc nhở khi stylist phản hồi tư vấn',
+                value: settings.notifyStylist,
+                onChanged: settingsNotifier.setStylistNotifications,
+              ),
+            ]),
+          ],
 
-          const SizedBox(height: 20),
+          if (!remoteMode) ...[
+            const SizedBox(height: 20),
 
-          _buildSectionHeader('TRẠNG THÁI DEMO'),
-          _buildCardWrapper([
-            _buildSwitchTile(
-              icon: Icons.wifi_off_rounded,
-              title: 'Mô phỏng mất kết nối',
-              subtitle: 'Bật để xem màn offline; dữ liệu mẫu vẫn còn',
-              value: ref.watch(demoConnectivityModeProvider),
-              onChanged: (value) {
-                ref
-                    .read(demoConnectivityModeProvider.notifier)
-                    .setOffline(value);
-                if (value && Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-          ]),
+            _buildSectionHeader('TRẠNG THÁI DEMO'),
+            _buildCardWrapper([
+              _buildSwitchTile(
+                icon: Icons.wifi_off_rounded,
+                title: 'Mô phỏng mất kết nối',
+                subtitle: 'Bật để xem màn offline; dữ liệu mẫu vẫn còn',
+                value: ref.watch(demoConnectivityModeProvider),
+                onChanged: (value) {
+                  ref
+                      .read(demoConnectivityModeProvider.notifier)
+                      .setOffline(value);
+                  if (value && Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+            ]),
+          ],
 
           const SizedBox(height: 20),
 
@@ -909,11 +932,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     TextEditingController controller,
     String hint, {
     bool obscure = false,
+    bool readOnly = false,
     TextInputType? keyboardType,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
+      readOnly: readOnly,
       keyboardType: keyboardType,
       style: const TextStyle(
         fontSize: 14,

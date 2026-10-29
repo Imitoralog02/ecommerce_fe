@@ -96,6 +96,8 @@ class AddressViewModel extends Notifier<AddressState> {
   }
 
   void selectAddress(String id) {
+    final repository = ref.read(addressRepositoryProvider);
+    if (repository is RemoteAddressRepository) repository.selectAddress(id);
     state = state.copyWith(selectedAddressId: id);
   }
 

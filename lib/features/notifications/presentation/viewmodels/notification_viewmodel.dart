@@ -9,47 +9,86 @@ class NotificationViewModel extends Notifier<List<NotificationEntity>> {
   List<NotificationEntity> build() {
     final repository = ref.read(notificationRepositoryProvider);
     if (repository is RemoteNotificationRepository) {
-      Future.microtask(() async {
-        try {
-          final items = await repository.refresh();
-          if (ref.mounted) state = items;
-        } catch (_) {}
-      });
+      Future.microtask(refresh);
     }
     return repository.getNotifications();
   }
 
-  void markAsRead(String id) {
+  Future<void> refresh() async {
+    final repository = ref.read(notificationRepositoryProvider);
+    if (repository is! RemoteNotificationRepository ||
+        !repository.api.isAuthenticated) {
+      return;
+    }
+    try {
+      final items = await repository.refresh();
+      if (ref.mounted) {
+        state = items;
+        ref.read(notificationErrorProvider.notifier).setError(null);
+      }
+    } catch (error) {
+      if (ref.mounted) {
+        ref.read(notificationErrorProvider.notifier).setError('$error');
+      }
+    }
+  }
+
+  Future<bool> markAsRead(String id) async {
     final remote = ref.read(notificationRepositoryProvider);
     if (remote is RemoteNotificationRepository) {
-      remote
-          .read(id)
-          .then((items) {
-            if (ref.mounted) state = items;
-          })
-          .catchError((Object _) {});
-      return;
+      try {
+        final items = await remote.read(id);
+        if (ref.mounted) {
+          state = items;
+          ref.read(notificationErrorProvider.notifier).setError(null);
+        }
+        return true;
+      } catch (error) {
+        if (ref.mounted) {
+          ref.read(notificationErrorProvider.notifier).setError('$error');
+        }
+        return false;
+      }
     }
     final repository = ref.read(notificationRepositoryProvider)..markAsRead(id);
     state = repository.getNotifications();
+    return true;
   }
 
-  void markAllAsRead() {
+  Future<bool> markAllAsRead() async {
     final remote = ref.read(notificationRepositoryProvider);
     if (remote is RemoteNotificationRepository) {
-      remote
-          .readAll()
-          .then((items) {
-            if (ref.mounted) state = items;
-          })
-          .catchError((Object _) {});
-      return;
+      try {
+        final items = await remote.readAll();
+        if (ref.mounted) {
+          state = items;
+          ref.read(notificationErrorProvider.notifier).setError(null);
+        }
+        return true;
+      } catch (error) {
+        if (ref.mounted) {
+          ref.read(notificationErrorProvider.notifier).setError('$error');
+        }
+        return false;
+      }
     }
     final repository = ref.read(notificationRepositoryProvider)
       ..markAllAsRead();
     state = repository.getNotifications();
+    return true;
   }
 }
+
+class NotificationError extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setError(String? error) => state = error;
+}
+
+final notificationErrorProvider = NotifierProvider<NotificationError, String?>(
+  NotificationError.new,
+);
 
 final notificationViewModelProvider =
     NotifierProvider<NotificationViewModel, List<NotificationEntity>>(
