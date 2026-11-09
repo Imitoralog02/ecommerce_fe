@@ -29,6 +29,13 @@ class _AuthSpy implements AuthRepository {
 
   @override
   Future<void> requestPasswordReset({required String email}) async {}
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {}
 }
 
 void main() {

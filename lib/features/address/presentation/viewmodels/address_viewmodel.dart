@@ -8,11 +8,13 @@ class AddressState {
   final String? errorMessage;
   final List<AddressEntity> addresses;
   final String selectedAddressId;
+  final bool isLoading;
 
   const AddressState({
     this.errorMessage,
     required this.addresses,
     required this.selectedAddressId,
+    this.isLoading = false,
   });
 
   AddressEntity? get selectedAddress {
@@ -26,11 +28,13 @@ class AddressState {
     String? errorMessage,
     List<AddressEntity>? addresses,
     String? selectedAddressId,
+    bool? isLoading,
   }) {
     return AddressState(
       errorMessage: errorMessage,
       addresses: addresses ?? this.addresses,
       selectedAddressId: selectedAddressId ?? this.selectedAddressId,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 }
@@ -40,7 +44,8 @@ class AddressViewModel extends Notifier<AddressState> {
   AddressState build() {
     final snapshot = ref.read(addressRepositoryProvider).load();
     final repository = ref.read(addressRepositoryProvider);
-    if (repository is RemoteAddressRepository) {
+    if (repository is RemoteAddressRepository &&
+        repository.api.isAuthenticated) {
       Future.microtask(() async {
         try {
           final remote = await repository.refresh();
@@ -51,38 +56,40 @@ class AddressViewModel extends Notifier<AddressState> {
             );
           }
         } catch (error) {
-          if (ref.mounted) state = state.copyWith(errorMessage: '$error');
+          if (ref.mounted) {
+            state = state.copyWith(errorMessage: '$error', isLoading: false);
+          }
         }
       });
     }
     return AddressState(
       addresses: snapshot.addresses,
       selectedAddressId: snapshot.selectedAddressId,
+      isLoading:
+          repository is RemoteAddressRepository &&
+          repository.api.isAuthenticated,
     );
   }
 
-  Future<bool> _save(AddressState next) async {
-    final repository = ref.read(addressRepositoryProvider);
-    if (repository is RemoteAddressRepository) {
-      try {
-        final remote = await repository.synchronize(
-          AddressBookSnapshot(
-            addresses: next.addresses,
-            selectedAddressId: next.selectedAddressId,
-          ),
+  Future<bool> _saveRemote(Future<AddressBookSnapshot> operation) async {
+    try {
+      final remote = await operation;
+      if (ref.mounted) {
+        state = AddressState(
+          addresses: remote.addresses,
+          selectedAddressId: remote.selectedAddressId,
         );
-        if (ref.mounted) {
-          state = AddressState(
-            addresses: remote.addresses,
-            selectedAddressId: remote.selectedAddressId,
-          );
-        }
-        return true;
-      } catch (error) {
-        if (ref.mounted) state = state.copyWith(errorMessage: '$error');
-        return false;
       }
+      return true;
+    } catch (error) {
+      if (ref.mounted) {
+        state = state.copyWith(errorMessage: '$error', isLoading: false);
+      }
+      return false;
     }
+  }
+
+  Future<bool> _save(AddressState next) async {
     ref
         .read(addressRepositoryProvider)
         .save(
@@ -102,6 +109,10 @@ class AddressViewModel extends Notifier<AddressState> {
   }
 
   Future<bool> addAddress(AddressEntity address) {
+    final repository = ref.read(addressRepositoryProvider);
+    if (repository is RemoteAddressRepository) {
+      return _saveRemote(repository.createAddress(address));
+    }
     var updated = List<AddressEntity>.from(state.addresses);
     if (address.isDefault) {
       updated = updated.map((a) => a.copyWith(isDefault: false)).toList();
@@ -118,6 +129,10 @@ class AddressViewModel extends Notifier<AddressState> {
   }
 
   Future<bool> updateAddress(AddressEntity address) {
+    final repository = ref.read(addressRepositoryProvider);
+    if (repository is RemoteAddressRepository) {
+      return _saveRemote(repository.updateAddress(address));
+    }
     var updated = state.addresses.map((a) {
       if (address.isDefault && a.id != address.id) {
         return a.copyWith(isDefault: false);
@@ -129,6 +144,10 @@ class AddressViewModel extends Notifier<AddressState> {
   }
 
   Future<bool> deleteAddress(String id) {
+    final repository = ref.read(addressRepositoryProvider);
+    if (repository is RemoteAddressRepository) {
+      return _saveRemote(repository.deleteAddress(id));
+    }
     final updated = state.addresses.where((a) => a.id != id).toList();
     String newSelected = state.selectedAddressId;
     if (newSelected == id) {
@@ -140,6 +159,10 @@ class AddressViewModel extends Notifier<AddressState> {
   }
 
   Future<bool> setDefaultAddress(String id) {
+    final repository = ref.read(addressRepositoryProvider);
+    if (repository is RemoteAddressRepository) {
+      return _saveRemote(repository.setDefaultAddress(id));
+    }
     final updated = state.addresses.map((a) {
       return a.copyWith(isDefault: a.id == id);
     }).toList();

@@ -5,6 +5,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
 import '../../domain/entities/voucher_entity.dart';
 import '../viewmodels/wallet_viewmodel.dart';
+import '../../../checkout/di/checkout_providers.dart';
+import '../../../../core/network/remote_repositories.dart';
+import 'remote_voucher_wallet_screen.dart';
 
 class VoucherWalletScreen extends ConsumerStatefulWidget {
   final int initialTab;
@@ -144,6 +147,9 @@ class _VoucherWalletScreenState extends ConsumerState<VoucherWalletScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (ref.read(checkoutRepositoryProvider) is RemoteCheckoutRepository) {
+      return const RemoteVoucherWalletScreen();
+    }
     final walletState = ref.watch(walletViewModelProvider);
     final filteredVouchers = walletState.filteredVouchers;
 

@@ -529,22 +529,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 );
               },
             ),
-            if (!remoteMode) ...[
-              const Divider(height: 1, color: Color(0xFFF0EBE3)),
-              _buildSettingTile(
-                icon: Icons.credit_card_outlined,
-                title: 'Phương thức thanh toán & Thẻ',
-                subtitle: 'Quản lý thẻ ngân hàng & ví điện tử',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    AppRouter.page(
-                      builder: (_) => const PaymentMethodsScreen(),
-                    ),
-                  );
-                },
-              ),
-            ],
+            const Divider(height: 1, color: Color(0xFFF0EBE3)),
+            _buildSettingTile(
+              icon: Icons.credit_card_outlined,
+              title: 'Phương thức thanh toán & Thẻ',
+              subtitle: 'Quản lý thẻ ngân hàng & ví điện tử',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  AppRouter.page(
+                    builder: (_) => const PaymentMethodsScreen(),
+                  ),
+                );
+              },
+            ),
           ]),
 
           const SizedBox(height: 20),
@@ -576,37 +574,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ]),
 
-          if (!remoteMode) ...[
-            const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-            // 3. Thông báo đẩy
-            _buildSectionHeader('CÀI ĐẶT THÔNG BÁO'),
-            _buildCardWrapper([
-              _buildSwitchTile(
-                icon: Icons.local_shipping_outlined,
-                title: 'Cập nhật đơn hàng',
-                subtitle: 'Nhận thông báo khi bưu kiện thay đổi lộ trình',
-                value: settings.notifyOrders,
-                onChanged: settingsNotifier.setOrderNotifications,
-              ),
-              const Divider(height: 1, color: Color(0xFFF0EBE3)),
-              _buildSwitchTile(
-                icon: Icons.card_giftcard_rounded,
-                title: 'Ưu đãi & Voucher VIP',
-                subtitle: 'Nhận tin voucher mới và sự kiện Flash Sale',
-                value: settings.notifyPromotions,
-                onChanged: settingsNotifier.setPromotionNotifications,
-              ),
-              const Divider(height: 1, color: Color(0xFFF0EBE3)),
-              _buildSwitchTile(
-                icon: Icons.support_agent_rounded,
-                title: 'Tin nhắn Stylist Concierge',
-                subtitle: 'Nhắc nhở khi stylist phản hồi tư vấn',
-                value: settings.notifyStylist,
-                onChanged: settingsNotifier.setStylistNotifications,
-              ),
-            ]),
-          ],
+          // 3. Thông báo đẩy
+          _buildSectionHeader('CÀI ĐẶT THÔNG BÁO'),
+          _buildCardWrapper([
+            _buildSwitchTile(
+              icon: Icons.local_shipping_outlined,
+              title: 'Cập nhật đơn hàng',
+              subtitle: 'Nhận thông báo khi bưu kiện thay đổi lộ trình',
+              value: settings.notifyOrders,
+              onChanged: settingsNotifier.setOrderNotifications,
+            ),
+            const Divider(height: 1, color: Color(0xFFF0EBE3)),
+            _buildSwitchTile(
+              icon: Icons.card_giftcard_rounded,
+              title: 'Ưu đãi & Voucher VIP',
+              subtitle: 'Nhận tin voucher mới và sự kiện Flash Sale',
+              value: settings.notifyPromotions,
+              onChanged: settingsNotifier.setPromotionNotifications,
+            ),
+            const Divider(height: 1, color: Color(0xFFF0EBE3)),
+            _buildSwitchTile(
+              icon: Icons.support_agent_rounded,
+              title: 'Tin nhắn Stylist Concierge',
+              subtitle: 'Nhắc nhở khi stylist phản hồi tư vấn',
+              value: settings.notifyStylist,
+              onChanged: settingsNotifier.setStylistNotifications,
+            ),
+          ]),
 
           if (!remoteMode) ...[
             const SizedBox(height: 20),
@@ -727,12 +723,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      _userName,
-                      style: const TextStyle(
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
+                    Flexible(
+                      child: Text(
+                        _userName.trim().isNotEmpty
+                            ? _userName
+                            : 'Thành viên NÉORA',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),

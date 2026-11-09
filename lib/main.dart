@@ -69,7 +69,7 @@ Future<void> main() async {
           ),
         ),
         settingsRepositoryProvider.overrideWithValue(
-          SharedPreferencesSettingsRepository(preferences),
+          SharedPreferencesSettingsRepository(preferences, remoteProfile: true),
         ),
         cartRepositoryProvider.overrideWithValue(remoteCart),
         addressRepositoryProvider.overrideWithValue(

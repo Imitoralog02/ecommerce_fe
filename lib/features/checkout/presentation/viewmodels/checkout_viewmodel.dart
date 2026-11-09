@@ -16,10 +16,13 @@ import '../../domain/usecases/place_order_use_case.dart';
 import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/entities/checkout_quote.dart';
+import '../../domain/entities/promotion_offer.dart';
 export '../../di/checkout_providers.dart';
 
 class CheckoutState {
   final CheckoutQuote? serverQuote;
+  final String? couponCode;
+  final List<PromotionOffer> offers;
   final ShippingType shippingType;
   final PaymentType paymentType;
   final double shippingFee;
@@ -28,6 +31,8 @@ class CheckoutState {
 
   const CheckoutState({
     this.serverQuote,
+    this.couponCode,
+    this.offers = const [],
     this.shippingType = ShippingType.express,
     this.paymentType = PaymentType.cashOnDelivery,
     this.shippingFee = 30000,
@@ -38,6 +43,9 @@ class CheckoutState {
   CheckoutState copyWith({
     CheckoutQuote? serverQuote,
     bool clearServerQuote = false,
+    String? couponCode,
+    bool clearCouponCode = false,
+    List<PromotionOffer>? offers,
     ShippingType? shippingType,
     PaymentType? paymentType,
     double? shippingFee,
@@ -47,6 +55,8 @@ class CheckoutState {
   }) {
     return CheckoutState(
       serverQuote: clearServerQuote ? null : serverQuote ?? this.serverQuote,
+      couponCode: clearCouponCode ? null : couponCode ?? this.couponCode,
+      offers: offers ?? this.offers,
       shippingType: shippingType ?? this.shippingType,
       paymentType: paymentType ?? this.paymentType,
       shippingFee: shippingFee ?? this.shippingFee,
@@ -84,13 +94,57 @@ class CheckoutViewModel extends Notifier<CheckoutState> {
     state = state.copyWith(paymentType: type);
   }
 
+  Future<void> loadOffers() async {
+    final repository = ref.read(checkoutRepositoryProvider);
+    if (repository is! RemoteCheckoutRepository) return;
+    try {
+      final offers = await repository.loadPromotions();
+      if (ref.mounted) state = state.copyWith(offers: offers);
+    } catch (_) {
+      // Checkout still accepts manually entered codes when the offer list is unavailable.
+    }
+  }
+
+  Future<bool> applyCoupon(String input) async {
+    final repository = ref.read(checkoutRepositoryProvider);
+    if (repository is! RemoteCheckoutRepository) return false;
+    final code = input.trim().toUpperCase();
+    if (code.isEmpty) {
+      state = state.copyWith(clearCouponCode: true, clearServerQuote: true, clearError: true);
+      await refreshQuote();
+      return true;
+    }
+    final generation = ++_quoteGeneration;
+    try {
+      final data = await repository.quote(state.shippingType, couponCode: code);
+      if (!ref.mounted || generation != _quoteGeneration) return false;
+      state = state.copyWith(
+        couponCode: code,
+        clearError: true,
+        serverQuote: CheckoutQuote(
+          subtotal: (data['subtotal'] as num).toDouble(),
+          shippingFee: (data['shippingFee'] as num).toDouble(),
+          discount: (data['discount'] as num).toDouble(),
+          total: (data['total'] as num).toDouble(),
+        ),
+      );
+      return true;
+    } on ApiException catch (error) {
+      if (ref.mounted) state = state.copyWith(errorMessage: error.message);
+      return false;
+    } catch (_) {
+      if (ref.mounted) state = state.copyWith(errorMessage: 'Không tải được báo giá. Vui lòng thử lại.');
+      return false;
+    }
+  }
+
   Future<void> refreshQuote() async {
     final repository = ref.read(checkoutRepositoryProvider);
     if (repository is! RemoteCheckoutRepository) return;
     final generation = ++_quoteGeneration;
     final shipping = state.shippingType;
     try {
-      final data = await repository.quote(shipping);
+      final data = await repository.quote(shipping, couponCode: state.couponCode);
       if (ref.mounted &&
           generation == _quoteGeneration &&
           shipping == state.shippingType) {
@@ -104,7 +158,15 @@ class CheckoutViewModel extends Notifier<CheckoutState> {
         );
       }
     } catch (error) {
-      if (ref.mounted) state = state.copyWith(errorMessage: '$error');
+      if (ref.mounted && generation == _quoteGeneration) {
+        final hadCoupon = state.couponCode != null;
+        state = state.copyWith(
+          clearServerQuote: true,
+          clearCouponCode: hadCoupon,
+          errorMessage: error is ApiException ? error.message : 'Không tải được báo giá. Vui lòng thử lại.',
+        );
+        if (hadCoupon) unawaited(refreshQuote());
+      }
     }
   }
 
@@ -164,6 +226,8 @@ class CheckoutViewModel extends Notifier<CheckoutState> {
         ),
         paymentMethods: paymentMethods,
         wallet: ref.read(walletRepositoryProvider).load(),
+        serverPricing: remote,
+        serverCouponCode: state.couponCode,
         firstOrder: !ref
             .read(orderViewModelProvider)
             .orders

@@ -27,10 +27,16 @@ class SettingsViewModel extends Notifier<UserSettings> {
   Future<void> updateProfile(UserProfile profile) async {
     final auth = ref.read(authRepositoryProvider);
     if (auth is RemoteAuthRepository) {
+      final owner = auth.api.userId;
       final updated = await auth.updateProfile(
         fullName: profile.name,
         phone: profile.phone,
       );
+      if (owner == null ||
+          auth.api.userId != owner ||
+          !auth.api.isAuthenticated) {
+        throw StateError('Phiên đăng nhập đã thay đổi');
+      }
       profile = profile.copyWith(
         name: updated['fullName'] as String? ?? profile.name,
         phone: updated['phone'] as String? ?? profile.phone,

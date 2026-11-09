@@ -31,6 +31,8 @@ ProductEntity productFromApi(dynamic value) {
     originalPrice: data['originalPrice'] == null
         ? null
         : asAmount(data['originalPrice']),
+    flashSaleId: data['flashSaleId'] as String?,
+    flashSaleRemaining: data['flashSaleRemaining'] as int?,
     composition: data['composition'] as String? ?? '',
     description: data['description'] as String? ?? '',
     availableSizes: List<String>.from(
@@ -146,6 +148,7 @@ OrderEntity orderFromApi(dynamic value, {AddressEntity? address}) {
     subtotal: asAmount(data['subtotal']),
     shippingFee: asAmount(data['shippingFee']),
     discountAmount: asAmount(data['discount']),
+    couponCode: data['couponCode'] as String?,
     totalAmount: asAmount(data['total']),
     shippingAddress: shippingAddress,
     trackingNumber: data['trackingNumber'] as String?,

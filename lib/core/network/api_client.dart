@@ -105,7 +105,8 @@ class ApiClient {
     String path,
     Map<String, Object?> body, {
     Map<String, String>? headers,
-  }) => _send('POST', path, body: body, headers: headers);
+    bool auth = true,
+  }) => _send('POST', path, body: body, headers: headers, auth: auth);
   Future<dynamic> put(String path, Map<String, Object?> body) =>
       _send('PUT', path, body: body);
   Future<dynamic> patch(String path) => _send('PATCH', path);
@@ -193,9 +194,17 @@ class ApiClient {
         rethrow;
       }
     }
-    final dynamic decoded = response.body.isEmpty
-        ? null
-        : jsonDecode(utf8.decode(response.bodyBytes));
+    final dynamic decoded;
+    try {
+      decoded = response.body.isEmpty
+          ? null
+          : jsonDecode(utf8.decode(response.bodyBytes));
+    } on FormatException {
+      throw ApiException(
+        response.statusCode < 400 ? 502 : response.statusCode,
+        'Máy chủ tạm thời không khả dụng. Vui lòng thử lại.',
+      );
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final error = decoded is Map<String, dynamic>
           ? decoded

@@ -10,6 +10,8 @@ class ProductEntity {
   final String category;
   final double price;
   final double? originalPrice;
+  final String? flashSaleId;
+  final int? flashSaleRemaining;
   final String composition;
   final String description;
   final List<String> availableSizes;
@@ -33,6 +35,8 @@ class ProductEntity {
     required this.category,
     required this.price,
     this.originalPrice,
+    this.flashSaleId,
+    this.flashSaleRemaining,
     required this.composition,
     required this.description,
     required this.availableSizes,
@@ -85,6 +89,8 @@ class ProductEntity {
     String? category,
     double? price,
     double? originalPrice,
+    String? flashSaleId,
+    int? flashSaleRemaining,
     String? composition,
     String? description,
     List<String>? availableSizes,
@@ -108,6 +114,8 @@ class ProductEntity {
       category: category ?? this.category,
       price: price ?? this.price,
       originalPrice: originalPrice ?? this.originalPrice,
+      flashSaleId: flashSaleId ?? this.flashSaleId,
+      flashSaleRemaining: flashSaleRemaining ?? this.flashSaleRemaining,
       composition: composition ?? this.composition,
       description: description ?? this.description,
       availableSizes: availableSizes ?? this.availableSizes,

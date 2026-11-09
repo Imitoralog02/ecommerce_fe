@@ -261,10 +261,16 @@ class CartViewModel extends Notifier<CartState> {
     String? size,
     String? color,
   ]) async {
+    final repository = ref.read(cartRepositoryProvider);
+    if (repository is RemoteCartRepository && !repository.api.isAuthenticated) {
+      state = state.copyWith(
+        errorMessage: 'Vui lòng đăng nhập để mua sản phẩm.',
+      );
+      return false;
+    }
     final selectedSize = size ?? product.availableSizes.firstOrNull;
     final selectedColor = color ?? product.colorNames.firstOrNull;
     if (selectedSize == null || selectedColor == null) return false;
-    final repository = ref.read(cartRepositoryProvider);
     if (repository is RemoteCartRepository) {
       try {
         final response =

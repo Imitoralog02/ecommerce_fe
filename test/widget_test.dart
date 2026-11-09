@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ecommerce_fe/main.dart';
 import 'package:ecommerce_fe/features/navigation/presentation/views/main_nav_screen.dart';
+import 'package:ecommerce_fe/features/auth/presentation/views/auth_screen.dart';
 import 'package:ecommerce_fe/features/settings/presentation/viewmodels/settings_viewmodel.dart';
 
 void main() {
@@ -16,6 +17,20 @@ void main() {
     // Initial frame displays the current Vietnamese NÉORA onboarding.
     expect(find.text('Bỏ qua'), findsOneWidget);
     expect(find.text('01 / 03'), findsOneWidget);
+  });
+
+  testWidgets('skipping onboarding opens the shop without sign in', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const ProviderScope(child: NeoraApp()));
+    await tester.pump();
+
+    await tester.tap(find.text('Bỏ qua'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MainNavScreen), findsOneWidget);
+    expect(find.byType(AuthScreen), findsNothing);
   });
 
   testWidgets('NeoraApp skips onboarding after it has been completed', (

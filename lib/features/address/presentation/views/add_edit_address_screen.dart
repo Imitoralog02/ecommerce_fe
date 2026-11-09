@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../data/vietnam_locations_data.dart';
 import '../../domain/entities/address_entity.dart';
 import '../viewmodels/address_viewmodel.dart';
 
@@ -26,18 +27,6 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
   late bool _isDefault;
   late String _label;
 
-  final List<String> _popularCities = [
-    'TP. Hồ Chí Minh',
-    'Hà Nội',
-    'Đà Nẵng',
-    'Hải Phòng',
-    'Cần Thơ',
-    'Bình Dương',
-    'Đồng Nai',
-    'Khánh Hoà',
-    'Lâm Đồng',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -47,7 +36,7 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
     _streetController = TextEditingController(text: a?.streetAddress ?? '');
     _wardController = TextEditingController(text: a?.ward ?? '');
     _districtController = TextEditingController(text: a?.district ?? '');
-    _cityController = TextEditingController(text: a?.city ?? 'TP. Hồ Chí Minh');
+    _cityController = TextEditingController(text: a?.city ?? '');
     _isDefault = a?.isDefault ?? false;
     _label = a?.label ?? 'Nhà riêng';
   }
@@ -64,86 +53,338 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
   }
 
   void _showCityPicker() {
+    _showLocationPicker(
+      title: 'Chọn Tỉnh / Thành phố',
+      searchHint: 'Tìm Tỉnh / Thành phố...',
+      items: VietnamLocationsData.cities,
+      selectedValue: _cityController.text,
+      onSelected: (city) {
+        if (_cityController.text != city) {
+          setState(() {
+            _cityController.text = city;
+            _districtController.text = '';
+            _wardController.text = '';
+          });
+        }
+      },
+    );
+  }
+
+  void _showDistrictPicker() {
+    final selectedCity = _cityController.text.trim();
+    if (selectedCity.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Vui lòng chọn Tỉnh / Thành phố trước',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          backgroundColor: AppColors.brandBlack,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      );
+      _showCityPicker();
+      return;
+    }
+
+    final districts = VietnamLocationsData.districtsForCity(selectedCity);
+    _showLocationPicker(
+      title: 'Chọn Quận / Huyện',
+      subtitle: 'Thuộc $selectedCity',
+      searchHint: 'Tìm Quận / Huyện...',
+      items: districts,
+      selectedValue: _districtController.text,
+      onSelected: (district) {
+        if (_districtController.text != district) {
+          setState(() {
+            _districtController.text = district;
+            _wardController.text = '';
+          });
+        }
+      },
+    );
+  }
+
+  void _showWardPicker() {
+    final selectedCity = _cityController.text.trim();
+    if (selectedCity.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Vui lòng chọn Tỉnh / Thành phố trước',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          backgroundColor: AppColors.brandBlack,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      );
+      _showCityPicker();
+      return;
+    }
+
+    final selectedDistrict = _districtController.text.trim();
+    if (selectedDistrict.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Vui lòng chọn Quận / Huyện trước',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          backgroundColor: AppColors.brandBlack,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      );
+      _showDistrictPicker();
+      return;
+    }
+
+    final wards = VietnamLocationsData.wardsForDistrict(
+      selectedCity,
+      selectedDistrict,
+    );
+    _showLocationPicker(
+      title: 'Chọn Phường / Xã',
+      subtitle: 'Thuộc $selectedDistrict, $selectedCity',
+      searchHint: 'Tìm Phường / Xã...',
+      items: wards,
+      selectedValue: _wardController.text,
+      onSelected: (ward) {
+        setState(() {
+          _wardController.text = ward;
+        });
+      },
+    );
+  }
+
+  void _showLocationPicker({
+    required String title,
+    String? subtitle,
+    required String searchHint,
+    required List<String> items,
+    required String selectedValue,
+    required ValueChanged<String> onSelected,
+  }) {
+    var searchQuery = '';
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBorder,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final filteredItems = searchQuery.trim().isEmpty
+                ? items
+                : items
+                      .where(
+                        (item) => item.toLowerCase().contains(
+                          searchQuery.trim().toLowerCase(),
+                        ),
+                      )
+                      .toList();
+
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
               ),
-              const SizedBox(height: 18),
-              const Text(
-                'Chọn Tỉnh / Thành phố',
-                style: TextStyle(
-                  fontSize: 16.5,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 16,
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
                 ),
-              ),
-              const SizedBox(height: 14),
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: _popularCities.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1, color: Color(0xFFF0EBE3)),
-                  itemBuilder: (_, index) {
-                    final city = _popularCities[index];
-                    final isSelected = city == _cityController.text;
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 2,
-                      ),
-                      title: Text(
-                        city,
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: isSelected
-                              ? FontWeight.w800
-                              : FontWeight.w500,
-                          color: isSelected
-                              ? AppColors.coralOrange
-                              : AppColors.textPrimary,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.cardBorder,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      trailing: isSelected
-                          ? const Icon(
-                              Icons.check_circle_rounded,
-                              color: AppColors.coralOrange,
-                              size: 20,
-                            )
-                          : null,
-                      onTap: () {
-                        setState(() {
-                          _cityController.text = city;
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              if (subtitle != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  subtitle,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            size: 20,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      onChanged: (value) {
+                        setModalState(() {
+                          searchQuery = value;
                         });
-                        Navigator.pop(ctx);
                       },
-                    );
-                  },
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: searchHint,
+                        hintStyle: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textMuted,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          size: 19,
+                          color: AppColors.textMuted,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.background,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 11,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: AppColors.cardBorder,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: AppColors.cardBorder,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: AppColors.coralOrange,
+                            width: 1.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (searchQuery.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          onSelected(searchQuery.trim());
+                          Navigator.pop(ctx);
+                        },
+                        icon: const Icon(Icons.edit_location_alt_outlined),
+                        label: Text(
+                          'Dùng địa phương tôi nhập: ${searchQuery.trim()}',
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: filteredItems.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 28),
+                              child: Center(
+                                child: Text(
+                                  'Không tìm thấy kết quả phù hợp',
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: filteredItems.length,
+                              separatorBuilder: (context, index) =>
+                                  const Divider(
+                                    height: 1,
+                                    color: Color(0xFFF0EBE3),
+                                  ),
+                              itemBuilder: (_, index) {
+                                final item = filteredItems[index];
+                                final isSelected = item == selectedValue;
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 2,
+                                  ),
+                                  title: Text(
+                                    item,
+                                    style: TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w800
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? AppColors.coralOrange
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  trailing: isSelected
+                                      ? const Icon(
+                                          Icons.check_circle_rounded,
+                                          color: AppColors.coralOrange,
+                                          size: 20,
+                                        )
+                                      : null,
+                                  onTap: () {
+                                    onSelected(item);
+                                    Navigator.pop(ctx);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -254,11 +495,15 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
               Navigator.pop(ctx);
               messenger.showSnackBar(
                 SnackBar(
-                  content: const Text('Đã xoá địa chỉ',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  content: const Text(
+                    'Đã xoá địa chỉ',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
                   backgroundColor: AppColors.saleRed,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               );
               Navigator.pop(context);
@@ -343,7 +588,11 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
                       hint: 'Ví dụ: 0908 123 456',
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
-                      validator: (v) => (v == null || v.trim().length < 9)
+                      validator: (v) =>
+                          (v == null ||
+                              !RegExp(
+                                r'^[0-9+ .()-]{8,20}$',
+                              ).hasMatch(v.trim()))
                           ? 'Số điện thoại không hợp lệ'
                           : null,
                     ),
@@ -364,81 +613,49 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Tỉnh / Thành phố
-                    GestureDetector(
+                    // 1. Tỉnh / Thành phố
+                    _buildLocationSelectorField(
+                      controller: _cityController,
+                      label: 'Tỉnh / Thành phố',
+                      placeholder: 'Chọn Tỉnh / Thành phố',
+                      icon: Icons.location_city_outlined,
                       onTap: _showCityPicker,
-                      behavior: HitTestBehavior.opaque,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.location_city_outlined,
-                              size: 20,
-                              color: AppColors.coralOrange,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Tỉnh / Thành phố',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _cityController.text.isEmpty
-                                        ? 'Chọn Tỉnh / Thành phố'
-                                        : _cityController.text,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: AppColors.textMuted,
-                            ),
-                          ],
-                        ),
-                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Vui lòng chọn Tỉnh / Thành phố'
+                          : null,
                     ),
                     const Divider(height: 1, color: Color(0xFFF2ECE4)),
-                    // Quận / Huyện
-                    _buildTextFormField(
+                    // 2. Quận / Huyện (phụ thuộc Tỉnh / Thành phố)
+                    _buildLocationSelectorField(
                       controller: _districtController,
                       label: 'Quận / Huyện',
-                      hint: 'Ví dụ: Quận 1, Cầu Giấy...',
+                      placeholder: _cityController.text.isEmpty
+                          ? 'Chọn Tỉnh / Thành phố trước'
+                          : 'Chọn Quận / Huyện (${_cityController.text})',
                       icon: Icons.map_outlined,
+                      enabled: _cityController.text.isNotEmpty,
+                      onTap: _showDistrictPicker,
                       validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Vui lòng nhập quận/huyện'
+                          ? 'Vui lòng chọn quận/huyện'
                           : null,
                     ),
                     const Divider(height: 1, color: Color(0xFFF2ECE4)),
-                    // Phường / Xã
-                    _buildTextFormField(
+                    // 3. Phường / Xã (phụ thuộc Quận / Huyện)
+                    _buildLocationSelectorField(
                       controller: _wardController,
                       label: 'Phường / Xã',
-                      hint: 'Ví dụ: Phường Bến Nghé...',
+                      placeholder: _districtController.text.isEmpty
+                          ? 'Chọn Quận / Huyện trước'
+                          : 'Chọn Phường / Xã (${_districtController.text})',
                       icon: Icons.holiday_village_outlined,
+                      enabled: _districtController.text.isNotEmpty,
+                      onTap: _showWardPicker,
                       validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Vui lòng nhập phường/xã'
+                          ? 'Vui lòng chọn phường/xã'
                           : null,
                     ),
                     const Divider(height: 1, color: Color(0xFFF2ECE4)),
-                    // Địa chỉ cụ thể
+                    // 4. Địa chỉ cụ thể
                     _buildTextFormField(
                       controller: _streetController,
                       label: 'Địa chỉ cụ thể (Số nhà, đường, toà nhà)',
@@ -484,26 +701,28 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Đặt làm địa chỉ mặc định',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Đặt làm địa chỉ mặc định',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Tự động chọn khi đặt đơn hàng mới',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: AppColors.textSecondary,
+                          SizedBox(height: 2),
+                          Text(
+                            'Tự động chọn khi đặt đơn hàng mới',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     Switch.adaptive(
                       value: _isDefault,
@@ -624,6 +843,99 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLocationSelectorField({
+    required TextEditingController controller,
+    required String label,
+    required String placeholder,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool enabled = true,
+    String? Function(String?)? validator,
+  }) {
+    return FormField<String>(
+      key: ValueKey('${label}_${controller.text}'),
+      initialValue: controller.text,
+      validator: (_) => validator?.call(controller.text),
+      builder: (fieldState) {
+        final hasValue = controller.text.trim().isNotEmpty;
+        return GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      icon,
+                      size: 20,
+                      color: enabled
+                          ? AppColors.coralOrange
+                          : AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            hasValue ? controller.text : placeholder,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: hasValue
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: hasValue
+                                  ? AppColors.textPrimary
+                                  : const Color(0xFFC0BAB0),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: enabled
+                          ? AppColors.textMuted
+                          : const Color(0xFFD5CFC7),
+                    ),
+                  ],
+                ),
+                if (fieldState.hasError) ...[
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 32),
+                    child: Text(
+                      fieldState.errorText!,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.saleRed,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

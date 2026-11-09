@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/navigation/guest_access.dart';
 import '../../../../core/connectivity/presentation/demo_connectivity_mode.dart';
 import '../../../../core/widgets/floating_liquid_glass_dock.dart';
 import '../../../../core/widgets/no_internet_screen.dart';
@@ -32,6 +33,7 @@ class _MainNavScreenState extends ConsumerState<MainNavScreen> {
 
   void _selectTab(int index) {
     if (_currentIndex == index) return;
+    if (index >= 2 && !requireLogin(context, ref)) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _currentIndex = index);
     if (index == 2) {

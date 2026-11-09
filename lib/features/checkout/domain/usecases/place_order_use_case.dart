@@ -34,6 +34,8 @@ class PlaceOrderUseCase {
     required PaymentMethodsState paymentMethods,
     WalletSnapshot? wallet,
     bool firstOrder = false,
+    bool serverPricing = false,
+    String? serverCouponCode,
   }) {
     if (cart.items.isEmpty) {
       throw const PlaceOrderException(PlaceOrderFailure.emptyCart);
@@ -68,7 +70,7 @@ class PlaceOrderUseCase {
       0,
       (sum, item) => sum + item.totalPrice,
     );
-    if (cart.appliedCoupon != null) {
+    if (cart.appliedCoupon != null && !serverPricing) {
       final promotion = CartPricing.evaluate(
         cart.appliedCoupon,
         subtotal: subtotal,
@@ -98,7 +100,7 @@ class PlaceOrderUseCase {
           wallet: wallet,
           firstOrder: firstOrder,
         ),
-        couponCode: cart.appliedCoupon,
+        couponCode: serverPricing ? serverCouponCode : cart.appliedCoupon,
       ),
     );
   }

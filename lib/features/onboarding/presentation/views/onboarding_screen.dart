@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../auth/presentation/views/auth_screen.dart';
 import '../viewmodels/onboarding_viewmodel.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -63,20 +62,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Future<void> _startWithNeora() async {
-    await ref.read(onboardingRepositoryProvider).markOnboardingSeen();
-    if (!mounted) return;
-    Navigator.push(context, AppRouter.page(builder: (_) => const AuthScreen()));
-  }
-
-  void _nextPage(int page) {
+  Future<void> _nextPage(int page) async {
     if (page < _pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
     } else {
-      _startWithNeora();
+      await _skipToHome();
     }
   }
 
@@ -110,7 +103,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     )
                   else
                     TextButton(
-                      onPressed: _startWithNeora,
+                      onPressed: () => _skipToHome(),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.textSecondary,
                         padding: const EdgeInsets.symmetric(
@@ -244,9 +237,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         ),
                       ),
                       child: Text(
-                        currentPage == 2
-                            ? 'Bắt đầu cùng NÉORA  →'
-                            : 'Tiếp tục  →',
+                        currentPage == 2 ? 'Khám phá NÉORA  →' : 'Tiếp tục  →',
                         style: const TextStyle(
                           fontFamily: AppTypography.sansFont,
                           fontSize: 13,

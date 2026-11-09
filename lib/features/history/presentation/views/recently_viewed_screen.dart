@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/navigation/guest_access.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
 import '../../../home/presentation/widgets/product_card_widget.dart';
@@ -216,6 +217,7 @@ class RecentlyViewedScreen extends ConsumerWidget {
                               );
                             },
                             onQuickAdd: () async {
+                              if (!requireLogin(context, ref)) return;
                               final added = await ref
                                   .read(cartViewModelProvider.notifier)
                                   .addToCartConfirmed(product);

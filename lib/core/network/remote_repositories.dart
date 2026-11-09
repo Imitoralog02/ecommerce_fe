@@ -9,12 +9,14 @@ import '../../features/cart/domain/entities/cart_snapshot.dart';
 import '../../features/cart/domain/repositories/cart_repository.dart';
 import '../../features/checkout/domain/entities/checkout_request.dart';
 import '../../features/checkout/domain/entities/checkout_selection.dart';
+import '../../features/checkout/domain/entities/promotion_offer.dart';
 import '../../features/checkout/domain/repositories/checkout_repository.dart';
 import '../../features/home/domain/entities/product_entity.dart';
 import '../../features/home/domain/repositories/product_repository.dart';
 import '../../features/notifications/domain/entities/notification_entity.dart';
 import '../../features/notifications/domain/repositories/notification_repository.dart';
 import '../../features/orders/domain/entities/order_entity.dart';
+import '../../features/shop/domain/entities/remote_flash_sale_campaign.dart';
 import '../../features/orders/domain/repositories/order_repository.dart';
 import '../../features/wishlist/domain/repositories/wishlist_repository.dart';
 import 'api_client.dart';
@@ -42,8 +44,26 @@ class RemoteAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> requestPasswordReset({required String email}) async =>
-      throw const ApiException(501, 'Chưa hỗ trợ đặt lại mật khẩu');
+  Future<void> requestPasswordReset({required String email}) async {
+    await api.post('/auth/password-reset/request', {
+      'email': email,
+    }, auth: false);
+  }
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    await api.post('/auth/password-reset/confirm', {
+      'email': email,
+      'code': code,
+      'newPassword': newPassword,
+    }, auth: false);
+    await api.clearSession();
+  }
+
   Future<void> logout() => api.logout();
   Future<Map<String, dynamic>> profile() async => asMap(await api.get('/me'));
   Future<Map<String, dynamic>> updateProfile({
@@ -61,6 +81,19 @@ class RemoteProductRepository implements ProductRepository {
     return asList(
       await api.get('/products/featured', query: {'size': '8'}),
     ).map(productFromApi).toList();
+  }
+
+  Future<List<RemoteFlashSaleCampaign>> getActiveFlashSales() async {
+    return asList(await api.get('/flash-sales/active')).map((entry) {
+      final data = asMap(entry);
+      return RemoteFlashSaleCampaign(
+        id: data['id'] as String,
+        title: data['title'] as String? ?? 'Flash Sale',
+        startsAt: DateTime.parse(data['startsAt'] as String).toLocal(),
+        endsAt: DateTime.parse(data['endsAt'] as String).toLocal(),
+        products: asList(data['products']).map(productFromApi).toList(),
+      );
+    }).toList();
   }
 
   Future<List<ProductEntity>> getAllProducts() => _loadPages(null);
@@ -249,13 +282,17 @@ class RemoteAddressRepository implements AddressRepository {
 
   @override
   void save(AddressBookSnapshot snapshot) {
-    unawaited(synchronize(snapshot));
+    throw UnsupportedError('Dùng API thêm, sửa hoặc xóa từng địa chỉ.');
   }
 
   Future<AddressBookSnapshot> refresh() async {
     _ensureOwner();
     final owner = _owner;
     await _pending;
+    return _fetch(owner);
+  }
+
+  Future<AddressBookSnapshot> _fetch(String? owner) async {
     final response = await api.get('/addresses');
     if (owner != api.userId) {
       throw const ApiException(401, 'Phiên đăng nhập đã thay đổi');
@@ -271,13 +308,10 @@ class RemoteAddressRepository implements AddressRepository {
     return _cache;
   }
 
-  Future<AddressBookSnapshot> synchronize(AddressBookSnapshot desired) {
+  Future<AddressBookSnapshot> _change(
+    Future<AddressBookSnapshot> Function(AddressBookSnapshot current) action,
+  ) {
     _ensureOwner();
-    if (!_loaded) {
-      return Future.error(
-        const ApiException(409, 'Địa chỉ đang tải, vui lòng thử lại'),
-      );
-    }
     final owner = _owner;
     final result = Completer<AddressBookSnapshot>();
     _pending = _pending.catchError((Object _) {}).then((_) async {
@@ -285,7 +319,13 @@ class RemoteAddressRepository implements AddressRepository {
         if (owner != api.userId) {
           throw const ApiException(401, 'Phiên đăng nhập đã thay đổi');
         }
-        result.complete(await _apply(desired, owner));
+        if (!_loaded) await _fetch(owner);
+        final next = await action(_cache);
+        if (owner != api.userId) {
+          throw const ApiException(401, 'Phiên đăng nhập đã thay đổi');
+        }
+        _cache = next;
+        result.complete(next);
       } catch (error, stack) {
         result.completeError(error, stack);
       }
@@ -293,56 +333,79 @@ class RemoteAddressRepository implements AddressRepository {
     return result.future;
   }
 
-  Future<AddressBookSnapshot> _apply(
-    AddressBookSnapshot desired,
-    String? owner,
+  Future<AddressBookSnapshot> createAddress(AddressEntity address) => _change((
+    current,
   ) async {
-    final original = asList(
-      await api.get('/addresses'),
-    ).map(addressFromApi).toList();
-    final oldById = {for (final address in original) address.id: address};
-    final desiredIds = desired.addresses.map((item) => item.id).toSet();
-    for (final item in original) {
-      if (owner != api.userId) {
-        throw const ApiException(401, 'Phiên đăng nhập đã thay đổi');
-      }
-      if (!desiredIds.contains(item.id)) {
-        await api.delete('/addresses/${Uri.encodeComponent(item.id)}');
-      }
-    }
-    String selected = desired.selectedAddressId;
-    for (final item in desired.addresses) {
-      if (owner != api.userId) {
-        throw const ApiException(401, 'Phiên đăng nhập đã thay đổi');
-      }
-      if (!oldById.containsKey(item.id)) {
-        final created = addressFromApi(
-          await api.post('/addresses', addressToApi(item)),
-        );
-        if (selected == item.id) selected = created.id;
-      } else if (!_sameAddress(oldById[item.id]!, item)) {
-        await api.put(
-          '/addresses/${Uri.encodeComponent(item.id)}',
-          addressToApi(item),
-        );
-      }
-    }
-    final items = asList(
-      await api.get('/addresses'),
-    ).map(addressFromApi).toList();
-    _cache = AddressBookSnapshot(addresses: items, selectedAddressId: selected);
-    return _cache;
-  }
+    final created = addressFromApi(
+      await api.post('/addresses', addressToApi(address)),
+    );
+    final items = current.addresses
+        .map(
+          (item) => created.isDefault ? item.copyWith(isDefault: false) : item,
+        )
+        .toList();
+    items.insert(0, created);
+    return AddressBookSnapshot(
+      addresses: items,
+      selectedAddressId: created.isDefault || current.selectedAddressId.isEmpty
+          ? created.id
+          : current.selectedAddressId,
+    );
+  });
 
-  bool _sameAddress(AddressEntity a, AddressEntity b) =>
-      a.recipientName == b.recipientName &&
-      a.phoneNumber == b.phoneNumber &&
-      a.streetAddress == b.streetAddress &&
-      a.ward == b.ward &&
-      a.district == b.district &&
-      a.city == b.city &&
-      a.isDefault == b.isDefault &&
-      a.label == b.label;
+  Future<AddressBookSnapshot> updateAddress(AddressEntity address) => _change((
+    current,
+  ) async {
+    final updated = addressFromApi(
+      await api.put(
+        '/addresses/${Uri.encodeComponent(address.id)}',
+        addressToApi(address),
+      ),
+    );
+    final items = current.addresses.map((item) {
+      if (item.id == updated.id) return updated;
+      return updated.isDefault ? item.copyWith(isDefault: false) : item;
+    }).toList();
+    if (!items.any((item) => item.id == updated.id)) items.insert(0, updated);
+    return AddressBookSnapshot(
+      addresses: items,
+      selectedAddressId: updated.isDefault
+          ? updated.id
+          : current.selectedAddressId,
+    );
+  });
+
+  Future<AddressBookSnapshot> deleteAddress(String id) => _change((
+    current,
+  ) async {
+    await api.delete('/addresses/${Uri.encodeComponent(id)}');
+    final items = current.addresses.where((item) => item.id != id).toList();
+    if (items.isNotEmpty && !items.any((item) => item.isDefault)) {
+      items[0] = items[0].copyWith(isDefault: true);
+    }
+    final selected = items.any((item) => item.id == current.selectedAddressId)
+        ? current.selectedAddressId
+        : (items.where((item) => item.isDefault).firstOrNull?.id ??
+              items.firstOrNull?.id ??
+              '');
+    return AddressBookSnapshot(addresses: items, selectedAddressId: selected);
+  });
+
+  Future<AddressBookSnapshot> setDefaultAddress(String id) => _change((
+    current,
+  ) async {
+    final updated = addressFromApi(
+      await api.patch('/addresses/${Uri.encodeComponent(id)}/default'),
+    );
+    final items = current.addresses
+        .map(
+          (item) =>
+              item.id == updated.id ? updated : item.copyWith(isDefault: false),
+        )
+        .toList();
+    if (!items.any((item) => item.id == updated.id)) items.insert(0, updated);
+    return AddressBookSnapshot(addresses: items, selectedAddressId: updated.id);
+  });
 }
 
 class RemoteWishlistRepository implements WishlistRepository {
@@ -573,23 +636,40 @@ class RemoteCheckoutRepository implements CheckoutRepository {
     }
   }
 
-  Future<Map<String, dynamic>> quote(ShippingType shipping) async {
+  Future<List<PromotionOffer>> loadPromotions() async {
+    final response = await api.get('/promotions');
+    return asList(response).map((entry) {
+      final data = asMap(entry);
+      return PromotionOffer(
+        code: data['code'] as String,
+        title: data['title'] as String? ?? '',
+        type: data['type'] as String? ?? '',
+        value: asAmount(data['value']),
+        minSubtotal: asAmount(data['minSubtotal']),
+        available: data['available'] as bool? ?? false,
+        remainingUses: data['remainingUses'] as int?,
+        endsAt: DateTime.tryParse(data['endsAt'] as String? ?? ''),
+      );
+    }).toList();
+  }
+
+  Future<Map<String, dynamic>> quote(
+    ShippingType shipping, {
+    String? couponCode,
+  }) async {
     await cart.settle();
     return asMap(
       await api.post('/orders/quote', {
         'shippingType': shipping.name.toUpperCase(),
+        'couponCode': couponCode,
       }),
     );
   }
 
   @override
   Future<OrderEntity> placeOrder(CheckoutRequest request) async {
-    if (request.selection.paymentType != PaymentType.cashOnDelivery ||
-        request.couponCode != null) {
-      throw const ApiException(
-        400,
-        'Hiện chỉ hỗ trợ COD, chưa áp dụng voucher hoặc xu',
-      );
+    if (request.selection.paymentType != PaymentType.cashOnDelivery) {
+      throw const ApiException(400, 'Hiện chỉ hỗ trợ COD');
     }
     final recovered = await recoverPendingOrder();
     if (recovered != null) return recovered;
@@ -638,9 +718,10 @@ class RemoteCheckoutRepository implements CheckoutRepository {
       'phone': request.address.phoneNumber,
       'addressLine': request.address.fullAddress,
       'expectedCartItems': expectedCartItems,
+      if (request.couponCode != null) 'couponCode': request.couponCode,
     };
     final fingerprint = '$body';
-    await quote(request.selection.shippingType);
+    await quote(request.selection.shippingType, couponCode: request.couponCode);
     final pending = PendingCheckout(
       key:
           '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 32)}',

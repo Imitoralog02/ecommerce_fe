@@ -85,6 +85,7 @@ class _AuthContentState extends ConsumerState<AuthContent> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _resetCodeController = TextEditingController();
 
   @override
   void dispose() {
@@ -92,6 +93,7 @@ class _AuthContentState extends ConsumerState<AuthContent> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _resetCodeController.dispose();
     super.dispose();
   }
 
@@ -100,6 +102,10 @@ class _AuthContentState extends ConsumerState<AuthContent> {
         AuthErrorCode.emailRequired => strings.authEmailRequiredError,
         AuthErrorCode.invalidEmail => strings.authInvalidEmailError,
         AuthErrorCode.resetFailed => strings.authResetFailedError,
+        AuthErrorCode.invalidResetCode =>
+          strings.localeName.startsWith('en')
+              ? 'The code is invalid or expired. Request a new code.'
+              : 'Mã không đúng hoặc đã hết hạn. Hãy yêu cầu mã mới.',
         AuthErrorCode.fullNameRequired => strings.authFullNameRequiredError,
         AuthErrorCode.weakPassword => strings.authWeakPasswordError,
         AuthErrorCode.passwordMismatch => strings.authPasswordMismatchError,
@@ -122,7 +128,18 @@ class _AuthContentState extends ConsumerState<AuthContent> {
           : 'Tài khoản đã được tạo. Vui lòng đăng nhập.';
     }
     return switch (code) {
-      AuthSuccessCode.resetLinkSent => strings.authResetLinkSent(email),
+      AuthSuccessCode.resetCodeSent =>
+        ref.read(authRepositoryProvider) is RemoteAuthRepository
+            ? (strings.localeName.startsWith('en')
+                  ? 'If the account exists, an 8-digit code was sent to $email.'
+                  : 'Nếu tài khoản tồn tại, mã 8 chữ số đã được gửi tới $email.')
+            : (strings.localeName.startsWith('en')
+                  ? 'Demo code: 12345678'
+                  : 'Mã thử trong chế độ demo: 12345678'),
+      AuthSuccessCode.passwordResetComplete =>
+        strings.localeName.startsWith('en')
+            ? 'Password changed. Please sign in.'
+            : 'Mật khẩu đã được đổi. Vui lòng đăng nhập.',
       AuthSuccessCode.registrationComplete => strings.authRegistrationComplete,
     };
   }
@@ -140,9 +157,17 @@ class _AuthContentState extends ConsumerState<AuthContent> {
     notifier.updatePassword(password);
     notifier.updateFullName(fullName);
     notifier.updateConfirmPassword(_confirmPasswordController.text);
+    notifier.updateResetCode(_resetCodeController.text);
 
     final success = await notifier.submit();
     if (!mounted) return;
+
+    if (success && state.currentTab == AuthTab.reset) {
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+      _resetCodeController.clear();
+      return;
+    }
 
     if (success && state.currentTab == AuthTab.register) {
       _passwordController.clear();
@@ -190,6 +215,13 @@ class _AuthContentState extends ConsumerState<AuthContent> {
     }
   }
 
+  void _switchTab(AuthTab tab) {
+    _passwordController.clear();
+    _confirmPasswordController.clear();
+    _resetCodeController.clear();
+    ref.read(authViewModelProvider.notifier).switchTab(tab);
+  }
+
   void _backToOnboarding() {
     if (widget.isBottomSheet) {
       Navigator.pop(context);
@@ -207,20 +239,26 @@ class _AuthContentState extends ConsumerState<AuthContent> {
     final state = ref.watch(authViewModelProvider);
     final notifier = ref.read(authViewModelProvider.notifier);
 
-    final eyebrowText = state.isForgot
+    final eyebrowText = state.isForgot || state.isReset
         ? 'KHÔI PHỤC MẬT KHẨU'
         : state.isRegister
         ? 'ĐĂNG KÝ'
         : 'ĐĂNG NHẬP';
 
-    final headlineText = state.isForgot
+    final headlineText = state.isForgot || state.isReset
         ? strings.forgotPasswordTitle
         : state.isRegister
         ? 'Bắt đầu cùng NÉORA.'
         : 'Mừng bạn trở lại.';
 
-    final subtitleText = state.isForgot
-        ? strings.forgotPasswordSubtitle
+    final subtitleText = state.isReset
+        ? (strings.localeName.startsWith('en')
+              ? 'Enter the email code and your new password.'
+              : 'Nhập mã trong email và mật khẩu mới của bạn.')
+        : state.isForgot
+        ? (strings.localeName.startsWith('en')
+              ? 'Enter your email to receive an 8-digit reset code.'
+              : 'Nhập email để nhận mã khôi phục gồm 8 chữ số.')
         : state.isRegister
         ? 'Một tài khoản, nhiều cảm hứng. Cùng tìm phong cách của riêng bạn.'
         : 'Đăng nhập để lưu món yêu thích và tiếp tục hành trình mặc đẹp cùng NÉORA.';
@@ -251,8 +289,10 @@ class _AuthContentState extends ConsumerState<AuthContent> {
                         ),
                         TextButton.icon(
                           onPressed: () {
-                            if (state.isRegister || state.isForgot) {
-                              notifier.switchTab(AuthTab.login);
+                            if (state.isReset) {
+                              _switchTab(AuthTab.forgot);
+                            } else if (state.isRegister || state.isForgot) {
+                              _switchTab(AuthTab.login);
                             } else if (Navigator.canPop(context)) {
                               Navigator.pop(context);
                             } else {
@@ -362,7 +402,13 @@ class _AuthContentState extends ConsumerState<AuthContent> {
                               )
                             : Text(
                                 state.isForgot
-                                    ? strings.sendResetLinkAction
+                                    ? (strings.localeName.startsWith('en')
+                                          ? 'Send reset code'
+                                          : 'Gửi mã khôi phục')
+                                    : state.isReset
+                                    ? (strings.localeName.startsWith('en')
+                                          ? 'Change password'
+                                          : 'Đổi mật khẩu')
                                     : state.isRegister
                                     ? 'Tạo tài khoản  →'
                                     : 'Đăng nhập  →',
@@ -377,14 +423,17 @@ class _AuthContentState extends ConsumerState<AuthContent> {
                     const SizedBox(height: 18),
                     Center(
                       child: GestureDetector(
-                        onTap: () => notifier.switchTab(
-                          state.isRegister || state.isForgot
+                        onTap: () => _switchTab(
+                          state.isRegister || state.isForgot || state.isReset
                               ? AuthTab.login
                               : AuthTab.register,
                         ),
                         child: Text.rich(
                           TextSpan(
-                            text: state.isRegister || state.isForgot
+                            text:
+                                state.isRegister ||
+                                    state.isForgot ||
+                                    state.isReset
                                 ? 'Đã có tài khoản? '
                                 : 'Chưa có tài khoản? ',
                             style: const TextStyle(
@@ -394,7 +443,10 @@ class _AuthContentState extends ConsumerState<AuthContent> {
                             ),
                             children: [
                               TextSpan(
-                                text: state.isRegister || state.isForgot
+                                text:
+                                    state.isRegister ||
+                                        state.isForgot ||
+                                        state.isReset
                                     ? 'Đăng nhập'
                                     : 'Đăng ký',
                                 style: const TextStyle(
@@ -459,6 +511,41 @@ class _AuthContentState extends ConsumerState<AuthContent> {
 
   Widget _buildFormFields(AuthState state, AuthViewModel notifier) {
     final strings = AppLocalizations.of(context);
+    if (state.isReset) {
+      return Column(
+        key: const ValueKey('reset_form'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Email: ${state.email}'),
+          const SizedBox(height: 16),
+          _buildFieldLabel('Mã khôi phục (8 chữ số)'),
+          _buildTextField(
+            controller: _resetCodeController,
+            hint: 'Nhập mã trong email',
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          _buildFieldLabel('Mật khẩu mới'),
+          _buildTextField(
+            controller: _passwordController,
+            hint: 'Nhập mật khẩu mới',
+            isPassword: true,
+            isObscured: !state.isPasswordVisible,
+            onToggleVisibility: notifier.togglePasswordVisibility,
+          ),
+          const SizedBox(height: 16),
+          _buildFieldLabel('Nhập lại mật khẩu mới'),
+          _buildTextField(
+            controller: _confirmPasswordController,
+            hint: 'Xác nhận mật khẩu mới',
+            isPassword: true,
+            isObscured: !state.isConfirmPasswordVisible,
+            onToggleVisibility: notifier.toggleConfirmPasswordVisibility,
+          ),
+        ],
+      );
+    }
+
     if (state.isForgot) {
       return Column(
         key: const ValueKey('forgot_form'),
@@ -608,7 +695,7 @@ class _AuthContentState extends ConsumerState<AuthContent> {
         Align(
           alignment: Alignment.centerRight,
           child: GestureDetector(
-            onTap: () => notifier.switchTab(AuthTab.forgot),
+            onTap: () => _switchTab(AuthTab.forgot),
             child: const Text(
               'Quên mật khẩu?',
               style: TextStyle(

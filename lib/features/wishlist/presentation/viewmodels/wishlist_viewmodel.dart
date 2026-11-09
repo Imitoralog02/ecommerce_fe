@@ -54,7 +54,8 @@ class WishlistViewModel extends Notifier<WishlistState> {
   @override
   WishlistState build() {
     final repository = ref.read(wishlistRepositoryProvider);
-    if (repository is RemoteWishlistRepository) {
+    if (repository is RemoteWishlistRepository &&
+        repository.api.isAuthenticated) {
       Future.microtask(() => refresh());
     }
     return WishlistState(items: repository.getItems());
@@ -93,6 +94,14 @@ class WishlistViewModel extends Notifier<WishlistState> {
   }
 
   bool toggleFavorite(ProductEntity product) {
+    final repository = ref.read(wishlistRepositoryProvider);
+    if (repository is RemoteWishlistRepository &&
+        !repository.api.isAuthenticated) {
+      state = state.copyWith(
+        errorMessage: 'Vui lòng đăng nhập để lưu sản phẩm.',
+      );
+      return false;
+    }
     if (state.isFavorite(product.id)) {
       removeFromWishlist(product.id);
       return false;

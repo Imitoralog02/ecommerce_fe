@@ -57,7 +57,9 @@ class AddressBookScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: addresses.isEmpty
+      body: addressState.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : addresses.isEmpty
           ? _buildEmptyState(context)
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 100),

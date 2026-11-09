@@ -4,9 +4,13 @@ import '../../domain/entities/user_settings.dart';
 import '../../domain/repositories/settings_repository.dart';
 
 class SharedPreferencesSettingsRepository implements SettingsRepository {
-  SharedPreferencesSettingsRepository(this._preferences);
+  SharedPreferencesSettingsRepository(
+    this._preferences, {
+    this.remoteProfile = false,
+  });
 
   final SharedPreferences _preferences;
+  final bool remoteProfile;
 
   static const _languageCodeKey = 'settings_language_code';
   static const _profileNameKey = 'settings_profile_name';
@@ -24,11 +28,21 @@ class SharedPreferencesSettingsRepository implements SettingsRepository {
   @override
   UserSettings load() => UserSettings(
     profile: UserProfile(
-      name: _preferences.getString(_profileNameKey) ?? 'Nguyễn Linh',
-      email: _preferences.getString(_profileEmailKey) ?? 'nguyenlinh@neora.vn',
-      phone: _preferences.getString(_profilePhoneKey) ?? '0908 123 456',
-      birthday: _preferences.getString(_profileBirthdayKey) ?? '15/08/1998',
-      gender: _preferences.getString(_profileGenderKey) ?? 'Nữ',
+      name: remoteProfile
+          ? ''
+          : _preferences.getString(_profileNameKey) ?? 'Nguyễn Linh',
+      email: remoteProfile
+          ? ''
+          : _preferences.getString(_profileEmailKey) ?? 'nguyenlinh@neora.vn',
+      phone: remoteProfile
+          ? ''
+          : _preferences.getString(_profilePhoneKey) ?? '0908 123 456',
+      birthday: remoteProfile
+          ? ''
+          : _preferences.getString(_profileBirthdayKey) ?? '15/08/1998',
+      gender: remoteProfile
+          ? ''
+          : _preferences.getString(_profileGenderKey) ?? 'Nữ',
     ),
     languageCode: _preferences.getString(_languageCodeKey) ?? 'vi',
     enableBiometrics: _preferences.getBool(_biometricsKey) ?? true,
@@ -42,9 +56,11 @@ class SharedPreferencesSettingsRepository implements SettingsRepository {
   @override
   void save(UserSettings settings) {
     _preferences.setString(_languageCodeKey, settings.languageCode);
-    _preferences.setString(_profileNameKey, settings.profile.name);
-    _preferences.setString(_profileEmailKey, settings.profile.email);
-    _preferences.setString(_profilePhoneKey, settings.profile.phone);
+    if (!remoteProfile) {
+      _preferences.setString(_profileNameKey, settings.profile.name);
+      _preferences.setString(_profileEmailKey, settings.profile.email);
+      _preferences.setString(_profilePhoneKey, settings.profile.phone);
+    }
     _preferences.setString(_profileBirthdayKey, settings.profile.birthday);
     _preferences.setString(_profileGenderKey, settings.profile.gender);
     _preferences.setBool(_biometricsKey, settings.enableBiometrics);

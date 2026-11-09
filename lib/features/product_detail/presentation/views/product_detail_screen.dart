@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/navigation/guest_access.dart';
 import '../../../../core/network/remote_repositories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -90,6 +91,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
   }
 
   Future<void> _handleAddToCart() async {
+    if (!requireLogin(context, ref)) return;
     final strings = AppLocalizations.of(context);
     final added = await ref
         .read(cartViewModelProvider.notifier)
@@ -133,6 +135,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
   }
 
   Future<void> _handleBuyNow() async {
+    if (!requireLogin(context, ref)) return;
     final added = await ref
         .read(cartViewModelProvider.notifier)
         .addToCartConfirmed(widget.product, _selectedSize, _selectedColorName);
@@ -230,6 +233,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                       color: AppColors.textPrimary,
                     ),
                     onPressed: () {
+                      if (!requireLogin(context, ref)) return;
                       Navigator.push(
                         context,
                         AppRouter.page(builder: (_) => const CartScreen()),
@@ -393,6 +397,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                             isFavorite: isFav,
                             size: 20,
                             onFavoriteChanged: (_) {
+                              if (!requireLogin(context, ref)) return;
                               ref
                                   .read(wishlistViewModelProvider.notifier)
                                   .toggleFavorite(widget.product);

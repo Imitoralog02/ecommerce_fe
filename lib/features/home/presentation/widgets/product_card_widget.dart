@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/navigation/guest_access.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/product_visual_widget.dart';
 import '../../../wishlist/presentation/viewmodels/wishlist_viewmodel.dart';
@@ -90,9 +91,12 @@ class ProductCardWidget extends ConsumerWidget {
                           alpha: 0.9,
                         ),
                       ),
-                      onPressed: () => ref
-                          .read(wishlistViewModelProvider.notifier)
-                          .toggleFavorite(product),
+                      onPressed: () {
+                        if (!requireLogin(context, ref)) return;
+                        ref
+                            .read(wishlistViewModelProvider.notifier)
+                            .toggleFavorite(product);
+                      },
                       icon: Icon(
                         favorite ? Icons.favorite : Icons.favorite_border,
                         size: 16,

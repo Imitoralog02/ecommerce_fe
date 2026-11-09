@@ -29,18 +29,23 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _noteController = TextEditingController();
+  final _couponController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     Future.microtask(
-      () => ref.read(checkoutViewModelProvider.notifier).refreshQuote(),
+            () {
+        ref.read(checkoutViewModelProvider.notifier).refreshQuote();
+        ref.read(checkoutViewModelProvider.notifier).loadOffers();
+      },
     );
   }
 
   @override
   void dispose() {
     _noteController.dispose();
+    _couponController.dispose();
     super.dispose();
   }
 
@@ -490,6 +495,53 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
             const SizedBox(height: 18),
 
+            if (remoteMode) ...[
+              if (checkoutState.offers.isNotEmpty) ...[
+                const Text('Mã ưu đãi đang có',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: checkoutState.offers.map((offer) => ActionChip(
+                    label: Text('${offer.code} · ${offer.title}'),
+                    onPressed: offer.available ? () {
+                      _couponController.text = offer.code;
+                      checkoutNotifier.applyCoupon(offer.code);
+                    } : null,
+                  )).toList(),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                controller: _couponController,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  labelText: 'Mã ưu đãi',
+                  hintText: 'NEORA10, NEORA30K, FREESHIP',
+                  suffixIcon: TextButton(
+                    onPressed: () async {
+                      final applied = await checkoutNotifier.applyCoupon(_couponController.text);
+                      if (!context.mounted) return;
+                      if (applied) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(_couponController.text.trim().isEmpty
+                              ? 'Đã bỏ mã ưu đãi' : 'Đã áp dụng mã ưu đãi')),
+                        );
+                      }
+                    },
+                    child: const Text('Áp dụng'),
+                  ),
+                ),
+              ),
+              if (checkoutState.errorMessage != null) ...[
+                const SizedBox(height: 6),
+                Text(checkoutState.errorMessage!,
+                    style: const TextStyle(color: AppColors.saleRed, fontSize: 12)),
+              ],
+              const SizedBox(height: 18),
+            ],
+
             // 5. Order Total Breakdown
             Container(
               padding: const EdgeInsets.all(16),
@@ -587,7 +639,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 onPressed:
                     checkoutState.isProcessing ||
                         cartState.items.isEmpty ||
-                        quote.promotionReason != null
+                        quote.promotionReason != null ||
+                        (remoteMode && checkoutState.serverQuote == null)
                     ? null
                     : _processPayment,
                 style: ElevatedButton.styleFrom(

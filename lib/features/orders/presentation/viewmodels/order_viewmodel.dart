@@ -35,7 +35,8 @@ class OrderViewModel extends Notifier<OrderState> {
   @override
   OrderState build() {
     ref.onDispose(() => _statusTimer?.cancel());
-    if (ref.read(orderRepositoryProvider) is RemoteOrderRepository) {
+    final repository = ref.read(orderRepositoryProvider);
+    if (repository is RemoteOrderRepository && repository.api.isAuthenticated) {
       Future.microtask(() => refresh());
     }
     return OrderState(orders: ref.read(orderRepositoryProvider).getOrders());

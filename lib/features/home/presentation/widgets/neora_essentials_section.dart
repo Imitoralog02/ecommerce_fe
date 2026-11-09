@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/navigation/guest_access.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../wishlist/presentation/viewmodels/wishlist_viewmodel.dart';
 import '../../domain/entities/product_entity.dart';
@@ -216,7 +217,7 @@ class NeoraEssentialsSection extends ConsumerWidget {
     ];
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
         color: AppColors.studioGray,
         borderRadius: BorderRadius.circular(6),
@@ -225,18 +226,13 @@ class NeoraEssentialsSection extends ConsumerWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.4;
-          final itemWidth = largeText || constraints.maxWidth < 280
-              ? constraints.maxWidth
-              : (constraints.maxWidth - 16) / 2;
-          return Wrap(
-            alignment: WrapAlignment.spaceAround,
-            spacing: 16,
-            runSpacing: 12,
-            children: [
-              for (final item in items)
-                SizedBox(
-                  width: itemWidth,
-                  child: Row(
+          if (largeText || constraints.maxWidth < 250) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 12),
+                  Row(
                     children: [
                       Container(
                         width: 32,
@@ -246,18 +242,18 @@ class NeoraEssentialsSection extends ConsumerWidget {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          item.$1,
+                          items[i].$1,
                           size: 16,
                           color: AppColors.primary,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              item.$2,
+                              items[i].$2,
                               style: const TextStyle(
                                 fontFamily: AppTypography.sansFont,
                                 fontSize: 11.5,
@@ -266,7 +262,7 @@ class NeoraEssentialsSection extends ConsumerWidget {
                               ),
                             ),
                             Text(
-                              item.$3,
+                              items[i].$3,
                               softWrap: true,
                               style: const TextStyle(
                                 fontFamily: AppTypography.sansFont,
@@ -279,8 +275,74 @@ class NeoraEssentialsSection extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
-            ],
+                ],
+              ],
+            );
+          }
+
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0)
+                    Container(
+                      width: 1,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      color: AppColors.cardBorder,
+                    ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE6EBE3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              items[i].$1,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            items[i].$2,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: AppTypography.sansFont,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            items[i].$3,
+                            textAlign: TextAlign.center,
+                            softWrap: true,
+                            style: const TextStyle(
+                              fontFamily: AppTypography.sansFont,
+                              fontSize: 10.5,
+                              height: 1.3,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           );
         },
       ),
@@ -392,9 +454,12 @@ class _SpotlightCard extends ConsumerWidget {
                             alpha: 0.92,
                           ),
                         ),
-                        onPressed: () => ref
-                            .read(wishlistViewModelProvider.notifier)
-                            .toggleFavorite(product),
+                        onPressed: () {
+                          if (!requireLogin(context, ref)) return;
+                          ref
+                              .read(wishlistViewModelProvider.notifier)
+                              .toggleFavorite(product);
+                        },
                         icon: Icon(
                           favorite ? Icons.favorite : Icons.favorite_border,
                           size: 17,
@@ -725,9 +790,12 @@ class _EssentialMiniCard extends ConsumerWidget {
                             alpha: 0.92,
                           ),
                         ),
-                        onPressed: () => ref
-                            .read(wishlistViewModelProvider.notifier)
-                            .toggleFavorite(product),
+                        onPressed: () {
+                          if (!requireLogin(context, ref)) return;
+                          ref
+                              .read(wishlistViewModelProvider.notifier)
+                              .toggleFavorite(product);
+                        },
                         icon: Icon(
                           favorite ? Icons.favorite : Icons.favorite_border,
                           size: 15,

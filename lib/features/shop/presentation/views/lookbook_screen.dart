@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/navigation/guest_access.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
@@ -81,6 +82,7 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
   }
 
   Future<void> _addSelectedToCart(LookbookThemeModel outfit) async {
+    if (!requireLogin(context, ref)) return;
     final notifier = ref.read(cartViewModelProvider.notifier);
     int addedCount = 0;
     for (int i = 0; i < outfit.items.length; i++) {
@@ -123,6 +125,7 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
           label: 'XEM GIỎ',
           textColor: Colors.white,
           onPressed: () {
+            if (!requireLogin(context, ref)) return;
             Navigator.push(
               context,
               AppRouter.page(builder: (_) => const CartScreen()),
@@ -211,6 +214,7 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
                   color: AppColors.textPrimary,
                 ),
                 onPressed: () {
+                  if (!requireLogin(context, ref)) return;
                   Navigator.push(
                     context,
                     AppRouter.page(builder: (_) => const CartScreen()),
@@ -816,6 +820,7 @@ class _LookbookScreenState extends ConsumerState<LookbookScreen> {
               color: AppColors.textPrimary,
             ),
             onPressed: () {
+              if (!requireLogin(context, ref)) return;
               Navigator.push(
                 context,
                 AppRouter.page(builder: (_) => const CartScreen()),

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/auth_providers.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/network/remote_repositories.dart';
 import 'dart:async';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
@@ -9,14 +10,16 @@ import '../../../wishlist/presentation/viewmodels/wishlist_viewmodel.dart';
 import '../../../orders/presentation/viewmodels/order_viewmodel.dart';
 import '../../../notifications/presentation/viewmodels/notification_viewmodel.dart';
 import '../../../settings/presentation/viewmodels/settings_viewmodel.dart';
+import '../../../home/presentation/viewmodels/home_viewmodel.dart';
 export '../../di/auth_providers.dart';
 
-enum AuthTab { login, register, forgot }
+enum AuthTab { login, register, forgot, reset }
 
 enum AuthErrorCode {
   emailRequired,
   invalidEmail,
   resetFailed,
+  invalidResetCode,
   fullNameRequired,
   weakPassword,
   passwordMismatch,
@@ -27,13 +30,18 @@ enum AuthErrorCode {
   loginFailed,
 }
 
-enum AuthSuccessCode { resetLinkSent, registrationComplete }
+enum AuthSuccessCode {
+  resetCodeSent,
+  passwordResetComplete,
+  registrationComplete,
+}
 
 class AuthState {
   final AuthTab currentTab;
   final String email;
   final String password;
   final String confirmPassword;
+  final String resetCode;
   final String fullName;
   final bool rememberMe;
   final bool agreeToTerms;
@@ -49,6 +57,7 @@ class AuthState {
     this.email = '',
     this.password = '',
     this.confirmPassword = '',
+    this.resetCode = '',
     this.fullName = '',
     this.rememberMe = true,
     this.agreeToTerms = true,
@@ -63,12 +72,14 @@ class AuthState {
   bool get isLogin => currentTab == AuthTab.login;
   bool get isRegister => currentTab == AuthTab.register;
   bool get isForgot => currentTab == AuthTab.forgot;
+  bool get isReset => currentTab == AuthTab.reset;
 
   AuthState copyWith({
     AuthTab? currentTab,
     String? email,
     String? password,
     String? confirmPassword,
+    String? resetCode,
     String? fullName,
     bool? rememberMe,
     bool? agreeToTerms,
@@ -86,6 +97,7 @@ class AuthState {
       email: email ?? this.email,
       password: password ?? this.password,
       confirmPassword: confirmPassword ?? this.confirmPassword,
+      resetCode: resetCode ?? this.resetCode,
       fullName: fullName ?? this.fullName,
       rememberMe: rememberMe ?? this.rememberMe,
       agreeToTerms: agreeToTerms ?? this.agreeToTerms,
@@ -116,6 +128,9 @@ class AuthViewModel extends Notifier<AuthState> {
   void switchTab(AuthTab tab) {
     state = state.copyWith(
       currentTab: tab,
+      password: '',
+      confirmPassword: '',
+      resetCode: '',
       clearError: true,
       clearSuccess: true,
     );
@@ -127,6 +142,10 @@ class AuthViewModel extends Notifier<AuthState> {
 
   void updatePassword(String password) {
     state = state.copyWith(password: password, clearError: true);
+  }
+
+  void updateResetCode(String code) {
+    state = state.copyWith(resetCode: code, clearError: true);
   }
 
   void updateConfirmPassword(String confirmPassword) {
@@ -176,12 +195,19 @@ class AuthViewModel extends Notifier<AuthState> {
     ref.invalidate(orderViewModelProvider);
     ref.invalidate(notificationViewModelProvider);
     ref.invalidate(settingsViewModelProvider);
+    ref.invalidate(homeViewModelProvider);
   }
 
   Future<void> _loadProfile(RemoteAuthRepository repository) async {
+    final owner = repository.api.userId;
     try {
       final profile = await repository.profile();
-      if (!ref.mounted) return;
+      if (!ref.mounted ||
+          owner == null ||
+          repository.api.userId != owner ||
+          !repository.api.isAuthenticated) {
+        return;
+      }
       ref
           .read(settingsViewModelProvider.notifier)
           .showRemoteProfile(
@@ -227,8 +253,64 @@ class AuthViewModel extends Notifier<AuthState> {
         return false;
       }
       state = state.copyWith(
+        currentTab: AuthTab.reset,
         isLoading: false,
-        successCode: AuthSuccessCode.resetLinkSent,
+        successCode: AuthSuccessCode.resetCodeSent,
+      );
+      return true;
+    }
+
+    if (state.currentTab == AuthTab.reset) {
+      if (!RegExp(r'^[0-9]{8}$').hasMatch(state.resetCode.trim())) {
+        state = state.copyWith(errorCode: AuthErrorCode.invalidResetCode);
+        return false;
+      }
+      if (password.length < 8 ||
+          !RegExp(r'[A-Z]').hasMatch(password) ||
+          !RegExp(r'[a-z]').hasMatch(password) ||
+          !RegExp(r'[0-9]').hasMatch(password)) {
+        state = state.copyWith(errorCode: AuthErrorCode.weakPassword);
+        return false;
+      }
+      if (state.confirmPassword != password) {
+        state = state.copyWith(errorCode: AuthErrorCode.passwordMismatch);
+        return false;
+      }
+      state = state.copyWith(
+        isLoading: true,
+        clearError: true,
+        clearSuccess: true,
+      );
+      try {
+        await ref
+            .read(authRepositoryProvider)
+            .confirmPasswordReset(
+              email: email,
+              code: state.resetCode.trim(),
+              newPassword: password,
+            );
+      } on ApiException catch (error) {
+        state = state.copyWith(
+          isLoading: false,
+          errorCode: error.status == 400
+              ? AuthErrorCode.invalidResetCode
+              : AuthErrorCode.resetFailed,
+        );
+        return false;
+      } catch (_) {
+        state = state.copyWith(
+          isLoading: false,
+          errorCode: AuthErrorCode.resetFailed,
+        );
+        return false;
+      }
+      state = state.copyWith(
+        currentTab: AuthTab.login,
+        password: '',
+        confirmPassword: '',
+        resetCode: '',
+        isLoading: false,
+        successCode: AuthSuccessCode.passwordResetComplete,
       );
       return true;
     }

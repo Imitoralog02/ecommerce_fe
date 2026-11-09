@@ -12,6 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakeAuthRepository implements AuthRepository {
   bool loginCalled = false;
   bool shouldFail = false;
+  String? resetEmail;
+  String? resetCode;
+  String? resetPassword;
 
   @override
   Future<void> login({required String email, required String password}) async {
@@ -27,12 +30,28 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> requestPasswordReset({required String email}) async {}
+  Future<void> requestPasswordReset({required String email}) async {
+    resetEmail = email;
+  }
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    resetEmail = email;
+    resetCode = code;
+    resetPassword = newPassword;
+  }
 }
 
 class _FakeCheckoutRepository implements CheckoutRepository {
   CheckoutRequest? receivedRequest;
   bool shouldFail = false;
+  String? resetEmail;
+  String? resetCode;
+  String? resetPassword;
 
   @override
   Future<OrderEntity> placeOrder(CheckoutRequest request) async {
@@ -53,6 +72,33 @@ class _FakeCheckoutRepository implements CheckoutRepository {
 }
 
 void main() {
+  test('password reset moves from email to code and back to login', () async {
+    final repository = _FakeAuthRepository();
+    final container = ProviderContainer(
+      overrides: [authRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+
+    final viewModel = container.read(authViewModelProvider.notifier);
+    viewModel.switchTab(AuthTab.forgot);
+    viewModel.updateEmail('demo@neora.vn');
+    expect(await viewModel.submit(), isTrue);
+    expect(repository.resetEmail, 'demo@neora.vn');
+    expect(container.read(authViewModelProvider).isReset, isTrue);
+
+    viewModel.updateResetCode('12345678');
+    viewModel.updatePassword('NewPassword123');
+    viewModel.updateConfirmPassword('NewPassword123');
+    expect(await viewModel.submit(), isTrue);
+    expect(repository.resetCode, '12345678');
+    expect(repository.resetPassword, 'NewPassword123');
+    expect(container.read(authViewModelProvider).isLogin, isTrue);
+    expect(
+      container.read(authViewModelProvider).successCode,
+      AuthSuccessCode.passwordResetComplete,
+    );
+  });
+
   test('AuthViewModel delegates login to AuthRepository', () async {
     final repository = _FakeAuthRepository();
     final container = ProviderContainer(

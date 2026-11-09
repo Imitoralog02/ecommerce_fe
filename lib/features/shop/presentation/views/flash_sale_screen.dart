@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/navigation/guest_access.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/product_visual_widget.dart';
 import '../../../cart/presentation/viewmodels/cart_viewmodel.dart';
@@ -9,6 +10,8 @@ import '../../../home/domain/entities/product_entity.dart';
 import '../../../home/presentation/viewmodels/home_viewmodel.dart';
 import '../../../product_detail/presentation/views/product_detail_screen.dart';
 import '../../domain/entities/flash_sale_campaign.dart';
+import '../../../../core/network/remote_repositories.dart';
+import 'remote_flash_sale_screen.dart';
 
 class FlashSaleScreen extends ConsumerStatefulWidget {
   const FlashSaleScreen({super.key});
@@ -59,6 +62,9 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.read(productRepositoryProvider) is RemoteProductRepository) {
+      return const RemoteFlashSaleScreen();
+    }
     final homeState = ref.watch(homeViewModelProvider);
     final allProducts = homeState.allProducts;
 
@@ -542,6 +548,7 @@ class _FlashSaleScreenState extends ConsumerState<FlashSaleScreen> {
                         if (isSlotActive && remaining > 0)
                           ElevatedButton(
                             onPressed: () async {
+                              if (!requireLogin(context, ref)) return;
                               final added = await ref
                                   .read(cartViewModelProvider.notifier)
                                   .addToCartConfirmed(product);

@@ -103,6 +103,95 @@ void main() {
   });
 
   test(
+    'address and recipient phone use individual backend operations',
+    () async {
+      final serverAddresses = <Map<String, dynamic>>[
+        {
+          'id': 'address-old',
+          'recipientName': 'Existing User',
+          'phoneNumber': '0900000001',
+          'streetAddress': '1 Old Street',
+          'ward': 'Ward A',
+          'district': 'District A',
+          'city': 'Hà Nội',
+          'isDefault': true,
+          'label': 'Nhà riêng',
+        },
+      ];
+      final calls = <String>[];
+      final client = ApiClient(
+        baseUrl: 'http://example.test/api/v1',
+        storage: MemorySessionStorage(),
+        client: MockClient((request) async {
+          calls.add('${request.method} ${request.url.path}');
+          if (request.method == 'GET') return jsonResponse(serverAddresses);
+          if (request.method == 'POST') {
+            final body = Map<String, dynamic>.from(
+              jsonDecode(request.body) as Map,
+            );
+            expect(body['phoneNumber'], '0912345678');
+            final created = <String, dynamic>{'id': 'address-new', ...body};
+            serverAddresses.insert(0, created);
+            return jsonResponse(created, 201);
+          }
+          if (request.method == 'PUT') {
+            final body = Map<String, dynamic>.from(
+              jsonDecode(request.body) as Map,
+            );
+            final updated = <String, dynamic>{'id': 'address-new', ...body};
+            serverAddresses[0] = updated;
+            return jsonResponse(updated);
+          }
+          if (request.method == 'PATCH') {
+            for (final item in serverAddresses) {
+              item['isDefault'] = item['id'] == 'address-new';
+            }
+            return jsonResponse(serverAddresses.first);
+          }
+          if (request.method == 'DELETE') {
+            serverAddresses.removeWhere((item) => item['id'] == 'address-new');
+            serverAddresses.first['isDefault'] = true;
+            return http.Response('', 204);
+          }
+          throw StateError('Unexpected ${request.method} ${request.url}');
+        }),
+      )..userId = 'user-1';
+      final repository = RemoteAddressRepository(client);
+      const address = AddressEntity(
+        id: 'temporary-client-id',
+        recipientName: 'Nguyễn Lan',
+        phoneNumber: '0912345678',
+        streetAddress: '2 New Street',
+        ward: 'Ward B',
+        district: 'District B',
+        city: 'Đà Nẵng',
+        isDefault: false,
+      );
+
+      final created = await repository.createAddress(address);
+      expect(created.addresses, hasLength(2));
+      expect(created.addresses.first.id, 'address-new');
+      expect(created.addresses.first.phoneNumber, '0912345678');
+      expect(calls.where((call) => call.startsWith('DELETE')), isEmpty);
+
+      final updated = await repository.updateAddress(
+        address.copyWith(id: 'address-new', phoneNumber: '0987654321'),
+      );
+      expect(updated.addresses.first.phoneNumber, '0987654321');
+      expect(serverAddresses.first['phoneNumber'], '0987654321');
+
+      final selected = await repository.setDefaultAddress('address-new');
+      expect(selected.selectedAddressId, 'address-new');
+      expect(selected.addresses.where((item) => item.isDefault), hasLength(1));
+
+      final remaining = await repository.deleteAddress('address-new');
+      expect(remaining.addresses.single.id, 'address-old');
+      expect(remaining.addresses.single.isDefault, isTrue);
+      expect(calls.where((call) => call.startsWith('DELETE')), hasLength(1));
+    },
+  );
+
+  test(
     'catalog loads later pages instead of truncating at 100 products',
     () async {
       final requestedPages = <String>[];
@@ -126,6 +215,56 @@ void main() {
     },
   );
 
+  test('remote promotions show account availability from backend', () async {
+    final client = ApiClient(
+      baseUrl: 'http://example.test/api/v1',
+      storage: MemorySessionStorage(),
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/v1/promotions');
+        return jsonResponse([
+          {
+            'code': 'NEORA10',
+            'title': 'Giảm 10%',
+            'type': 'PERCENT',
+            'value': 10,
+            'minSubtotal': 200000,
+            'available': false,
+            'remainingUses': 0,
+          },
+        ]);
+      }),
+    );
+    final offers = await RemoteCheckoutRepository(
+      client, RemoteCartRepository(client),
+    ).loadPromotions();
+    expect(offers.single.code, 'NEORA10');
+    expect(offers.single.available, isFalse);
+    expect(offers.single.remainingUses, 0);
+  });
+
+  test('remote Flash Sale reads the same sale price as catalog', () async {
+    final client = ApiClient(
+      baseUrl: 'http://example.test/api/v1',
+      storage: MemorySessionStorage(),
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/v1/flash-sales/active');
+        return jsonResponse([
+          {
+            'id': 'sale-1',
+            'title': 'Ưu đãi tuần này',
+            'startsAt': '2026-11-08T00:00:00Z',
+            'endsAt': '2026-11-15T00:00:00Z',
+            'products': [
+              {'id': 'p1', 'title': 'Đầm', 'price': 399000, 'originalPrice': 459000},
+            ],
+          },
+        ]);
+      }),
+    );
+    final campaigns = await RemoteProductRepository(client).getActiveFlashSales();
+    expect(campaigns.single.products.single.price, 399000);
+    expect(campaigns.single.products.single.originalPrice, 459000);
+  });
   test('login uses access token and rotates refresh token after 401', () async {
     final storage = MemorySessionStorage();
     var cartCalls = 0;

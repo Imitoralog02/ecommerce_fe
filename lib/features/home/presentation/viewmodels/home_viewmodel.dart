@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/remote_repositories.dart';
 import '../../../auth/presentation/viewmodels/auth_viewmodel.dart';
+import '../../data/repositories/mock_product_repository.dart';
 import '../../di/home_providers.dart';
 import '../../domain/entities/product_entity.dart';
 export '../../di/home_providers.dart';
@@ -11,12 +12,14 @@ class HomeState {
   final String? errorMessage;
   final List<ProductEntity> allProducts;
   final String selectedCategory;
+  final bool usingSampleCatalog;
 
   const HomeState({
     this.isLoading = false,
     this.errorMessage,
     this.allProducts = const [],
     this.selectedCategory = 'Tất cả',
+    this.usingSampleCatalog = false,
   });
 
   List<ProductEntity> get featuredProducts {
@@ -42,12 +45,14 @@ class HomeState {
     bool clearError = false,
     List<ProductEntity>? allProducts,
     String? selectedCategory,
+    bool? usingSampleCatalog,
   }) {
     return HomeState(
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       allProducts: allProducts ?? this.allProducts,
       selectedCategory: selectedCategory ?? this.selectedCategory,
+      usingSampleCatalog: usingSampleCatalog ?? this.usingSampleCatalog,
     );
   }
 }
@@ -56,13 +61,24 @@ class HomeViewModel extends Notifier<HomeState> {
   @override
   HomeState build() {
     Future.microtask(() => loadHomeData());
+    final repository = ref.read(productRepositoryProvider);
+    if (repository is RemoteProductRepository &&
+        !repository.api.isAuthenticated) {
+      return HomeState(
+        allProducts: MockProductRepository.mockCatalog,
+        usingSampleCatalog: true,
+      );
+    }
     return const HomeState(isLoading: true);
   }
 
   Future<void> loadHomeData() async {
     if (!ref.mounted) return;
     final repository = ref.read(productRepositoryProvider);
-    state = state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(
+      isLoading: state.allProducts.isEmpty,
+      clearError: true,
+    );
     try {
       final all = repository is RemoteProductRepository
           ? await repository.getAllProducts()
@@ -78,10 +94,23 @@ class HomeViewModel extends Notifier<HomeState> {
       state = state.copyWith(
         isLoading: false,
         allProducts: all,
+        usingSampleCatalog: false,
         clearError: true,
       );
     } catch (error) {
       if (!ref.mounted) return;
+      if (repository is RemoteProductRepository &&
+          !repository.api.isAuthenticated &&
+          error is ApiException &&
+          error.status >= 500) {
+        state = state.copyWith(
+          isLoading: false,
+          allProducts: MockProductRepository.mockCatalog,
+          usingSampleCatalog: true,
+          clearError: true,
+        );
+        return;
+      }
       state = state.copyWith(
         isLoading: false,
         errorMessage: error is ApiException
